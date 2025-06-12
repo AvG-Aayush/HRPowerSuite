@@ -132,7 +132,7 @@ const startServer = async () => {
   process.on("SIGINT", shutdown);
 
   // Start server
-  const port = 3000;
+  const port = 3000; // Use environment port or default to 3000
   server.listen(port, "0.0.0.0", () => {
     log(`Server running on port ${port}`);
   });
