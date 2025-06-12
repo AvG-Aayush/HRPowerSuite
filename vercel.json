@@ -34,11 +34,7 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "functions": {
-    "dist/index.js": {
-      "maxDuration": 30
-    }
-  },
+
   "installCommand": "npm install",
   "buildCommand": "npm run build && npm run build:server"
 }
