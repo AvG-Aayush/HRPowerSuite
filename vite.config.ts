@@ -16,6 +16,7 @@ export default defineConfig({
       ? [(async () => (await import("@replit/vite-plugin-cartographer")).cartographer())()]
       : []),
   ],
+      base: process.env.VITE_BASE_PATH || "/HRPowerSuite",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client", "src"),
@@ -37,6 +38,7 @@ export default defineConfig({
     fs: {
       strict: true,
       deny: ["**/.*"],
+      
     },
   },
 });
