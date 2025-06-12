@@ -10,6 +10,7 @@ import { pool } from "./db";
 import { attendanceScheduler } from "./attendance-scheduler";
 import path from "path";
 import { fileURLToPath } from "url";
+import http from "http"; // ✅ Added for creating server
 
 // Compute __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -24,7 +25,6 @@ app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 
 // Session configuration with PostgreSQL store
 const PgSession = connectPgSimple(session);
-
 app.use(
   session({
     store: new PgSession({
@@ -37,7 +37,7 @@ app.use(
     saveUninitialized: false,
     rolling: true,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // True in production with HTTPS
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: config.auth.tokenExpiry * 1000,
       sameSite: "lax",
@@ -55,10 +55,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   let capturedJsonResponse: Record<string, any> | undefined;
 
   const originalJson = res.json.bind(res);
-  res.json = function (body: any) { // Simplified to handle only the body
+  res.json = function (body: any) {
     if (!res.headersSent) {
-      capturedJsonResponse = body; // Capture the body for logging
-      return originalJson(body); // Call original with just the body
+      capturedJsonResponse = body;
+      return originalJson(body);
     }
     return res;
   };
@@ -67,7 +67,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`.slice(0, 200); // Limit length
+      if (capturedJsonResponse)
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`.slice(0, 200);
       log(logLine);
     }
   });
@@ -95,7 +96,7 @@ const initializeServer = async () => {
 const startServer = async () => {
   await initializeServer();
 
-  const server = await registerRoutes(app);
+  registerRoutes(app);
 
   cleanupService.start();
   log("Cleanup service started - runs every hour");
@@ -111,11 +112,14 @@ const startServer = async () => {
     log(`Server error [${status}]: ${message}`, "error");
   });
 
-  // Vite setup for development, static serving for production
+  // Create HTTP server
+  const server = http.createServer(app);
+
+  // Vite setup or static serving
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app); // Assumes serveStatic handles the dist path internally
+    serveStatic(app);
   }
 
   // Graceful shutdown
@@ -131,8 +135,7 @@ const startServer = async () => {
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
 
-  // Start server
-  const port = 3000;
+  const port = Number(process.env.PORT) || 3000;
   server.listen(port, "0.0.0.0", () => {
     log(`Server running on port ${port}`);
   });

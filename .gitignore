@@ -119,3 +119,4 @@ uploads/*
 # Replit specific (optional - usually you want to keep these)
 # .replit
 # replit.nix
+.vercel
