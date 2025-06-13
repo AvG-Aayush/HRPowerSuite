@@ -463,7 +463,7 @@ export default function ProjectTimeTracker() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {assignments.map((assignment) => (
+                                  {availableAssignments.map((assignment) => (
                                     <SelectItem 
                                       key={assignment.projectId} 
                                       value={assignment.projectId.toString()}
