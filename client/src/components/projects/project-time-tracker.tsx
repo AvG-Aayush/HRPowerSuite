@@ -51,6 +51,8 @@ interface ProjectAssignment {
   projectName: string;
   projectStatus: string;
   projectPriority: string;
+  projectStartDate: string | null;
+  projectEndDate: string | null;
 }
 
 interface ProjectTimeEntry {
@@ -85,6 +87,25 @@ export default function ProjectTimeTracker() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [timeAllocations, setTimeAllocations] = useState<TimeAllocation[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Filter assignments based on project date ranges and selected date
+  const getAvailableProjectsForDate = (assignments: ProjectAssignment[], selectedDate: Date) => {
+    return assignments.filter(assignment => {
+      // If project has no start date, consider it available from the beginning
+      const projectStartDate = assignment.projectStartDate ? new Date(assignment.projectStartDate) : null;
+      // If project has no end date, consider it available until now
+      const projectEndDate = assignment.projectEndDate ? new Date(assignment.projectEndDate) : null;
+      
+      // Check if selected date falls within project date range
+      const isAfterStart = !projectStartDate || selectedDate >= projectStartDate;
+      const isBeforeEnd = !projectEndDate || selectedDate <= projectEndDate;
+      
+      return isAfterStart && isBeforeEnd;
+    });
+  };
+
+  // Get filtered assignments for the selected date
+  const availableAssignments = getAvailableProjectsForDate(assignments, selectedDate);
 
   // Fetch user's project assignments
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<ProjectAssignment[]>({

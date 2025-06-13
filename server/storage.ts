@@ -778,7 +778,6 @@ export class DatabaseStorage implements IStorage {
       priority: projects.priority,
       startDate: projects.startDate,
       endDate: projects.endDate,
-      locations: projects.locations,
       estimatedHours: projects.estimatedHours,
       actualHours: projects.actualHours,
       budget: projects.budget,
@@ -821,9 +820,6 @@ export class DatabaseStorage implements IStorage {
       projectId: projectAssignments.projectId,
       userId: projectAssignments.userId,
       role: projectAssignments.role,
-      assignedHours: projectAssignments.assignedHours,
-      actualHours: projectAssignments.actualHours,
-      hourlyRate: projectAssignments.hourlyRate,
       isActive: projectAssignments.isActive,
       assignedBy: projectAssignments.assignedBy,
       assignedAt: projectAssignments.assignedAt,
@@ -848,16 +844,15 @@ export class DatabaseStorage implements IStorage {
       projectId: projectAssignments.projectId,
       userId: projectAssignments.userId,
       role: projectAssignments.role,
-      assignedHours: projectAssignments.assignedHours,
-      actualHours: projectAssignments.actualHours,
-      hourlyRate: projectAssignments.hourlyRate,
       isActive: projectAssignments.isActive,
       assignedBy: projectAssignments.assignedBy,
       assignedAt: projectAssignments.assignedAt,
       removedAt: projectAssignments.removedAt,
       projectName: projects.name,
       projectStatus: projects.status,
-      projectPriority: projects.priority
+      projectPriority: projects.priority,
+      projectStartDate: projects.startDate,
+      projectEndDate: projects.endDate
     })
     .from(projectAssignments)
     .innerJoin(projects, eq(projectAssignments.projectId, projects.id))
