@@ -8,10 +8,10 @@ dotenv.config()
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl || databaseUrl.trim() === '') {
-  console.error("DATABASE_URL is not properly configured");
-  console.error("Please provide a valid Supabase connection string in the DATABASE_URL environment variable");
+  console.error("DATABASE_URL is missing or empty");
+  console.error("You need to set the DATABASE_URL environment variable with your Supabase connection string");
   console.error("Format: postgresql://postgres.[PROJECT_ID]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres");
-  throw new Error("DATABASE_URL must be set with a valid Supabase connection string");
+  process.exit(1);
 }
 
 console.log("Connecting to Supabase database...");

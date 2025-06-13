@@ -98,6 +98,57 @@ export async function registerRoutes(app: Express) {
     res.json({ user: { ...req.user, password: undefined } });
   });
 
+  // Profile management routes
+  app.get('/api/profile/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Users can only view their own profile unless admin/hr
+      if (req.user!.id !== userId && !['admin', 'hr'].includes(req.user!.role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({ ...user, password: undefined });
+    } catch (error) {
+      console.error('Profile fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+  });
+
+  app.put('/api/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const updates = req.body;
+      
+      // Remove sensitive fields that shouldn't be updated via this endpoint
+      delete updates.password;
+      delete updates.role;
+      delete updates.id;
+
+      const user = await storage.updateUser(req.user!.id, updates);
+      res.json({ user: { ...user, password: undefined } });
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(400).json({ error: 'Failed to update profile' });
+    }
+  });
+
+  app.put('/api/profile/picture', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { profilePicture } = updateProfilePictureSchema.parse(req.body);
+      
+      const user = await storage.updateUser(req.user!.id, { profilePicture });
+      res.json({ user: { ...user, password: undefined } });
+    } catch (error) {
+      console.error('Profile picture update error:', error);
+      res.status(400).json({ error: 'Failed to update profile picture' });
+    }
+  });
+
   // User management
   app.get('/api/users', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
     try {
