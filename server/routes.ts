@@ -30,7 +30,6 @@ import {
   insertOvertimeRequestSchema,
   insertProjectSchema,
   insertProjectAssignmentSchema,
-  insertProjectLocationSchema,
   insertProjectTimeEntrySchema,
   loginSchema,
   registerSchema,
