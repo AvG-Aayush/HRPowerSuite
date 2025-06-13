@@ -110,28 +110,25 @@ export default function ProjectTimeTracker() {
   });
 
   // Fetch user's project assignments
-  const { data: assignments = [], isLoading: assignmentsLoading, error: assignmentsError } = useQuery({
+  const { data: assignments = [], isLoading: assignmentsLoading, error: assignmentsError } = useQuery<ProjectAssignment[]>({
     queryKey: ['/api/user/project-assignments'],
     enabled: !!user,
   });
 
   // Fetch daily time entries
-  const { data: dailyTimeEntries = [], isLoading: timeEntriesLoading, error: timeEntriesError } = useQuery({
+  const { data: dailyTimeEntries = [], isLoading: timeEntriesLoading, error: timeEntriesError } = useQuery<ProjectTimeEntry[]>({
     queryKey: ['/api/user/daily-project-time', format(selectedDate, 'yyyy-MM-dd')],
     enabled: !!user,
   });
 
   // Fetch attendance for the day to get total working hours
-  const { data: attendance, isLoading: attendanceLoading, error: attendanceError } = useQuery({
+  const { data: attendance, isLoading: attendanceLoading, error: attendanceError } = useQuery<any[]>({
     queryKey: ['/api/attendance/today'],
     enabled: !!user,
   });
 
   const createTimeEntryMutation = useMutation({
-    mutationFn: (data: TimeEntryData) => apiRequest('/api/project-time-entries', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: TimeEntryData) => apiRequest('/api/project-time-entries', 'POST', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/user/daily-project-time', format(selectedDate, 'yyyy-MM-dd')] 
@@ -157,10 +154,7 @@ export default function ProjectTimeTracker() {
 
   const updateTimeEntryMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<ProjectTimeEntry> }) => 
-      apiRequest(`/api/project-time-entries/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
+      apiRequest(`/api/project-time-entries/${id}`, 'PUT', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/user/daily-project-time', format(selectedDate, 'yyyy-MM-dd')] 
@@ -181,9 +175,7 @@ export default function ProjectTimeTracker() {
   });
 
   const deleteTimeEntryMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/project-time-entries/${id}`, {
-      method: 'DELETE',
-    }),
+    mutationFn: (id: number) => apiRequest(`/api/project-time-entries/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/user/daily-project-time', format(selectedDate, 'yyyy-MM-dd')] 
@@ -207,7 +199,7 @@ export default function ProjectTimeTracker() {
   };
 
   const getTotalLoggedHours = () => {
-    return dailyTimeEntries.reduce((total: number, entry: ProjectTimeEntry) => 
+    return (dailyTimeEntries as ProjectTimeEntry[]).reduce((total: number, entry: ProjectTimeEntry) => 
       total + entry.hoursSpent, 0
     );
   };
@@ -255,6 +247,41 @@ export default function ProjectTimeTracker() {
   const totalWorkingHours = getTotalWorkingHours();
   const totalLoggedHours = getTotalLoggedHours();
   const remainingHours = getRemainingHours();
+
+  // Show loading state while any of the critical data is loading
+  if (assignmentsLoading || (timeEntriesLoading && !(dailyTimeEntries as ProjectTimeEntry[]).length)) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold mb-2">Loading Time Tracker</h3>
+            <p className="text-muted-foreground">Fetching your project assignments and time entries...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there are critical errors
+  if (assignmentsError || timeEntriesError) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Clock className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Unable to Load Time Tracker</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              There was an error loading your project data. Please try refreshing the page.
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Refresh Page
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -391,7 +418,7 @@ export default function ProjectTimeTracker() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {assignments.map((assignment: ProjectAssignment) => (
+                            {(assignments as ProjectAssignment[]).map((assignment: ProjectAssignment) => (
                               <SelectItem key={assignment.projectId} value={assignment.projectId.toString()}>
                                 {assignment.projectName}
                               </SelectItem>
@@ -531,7 +558,7 @@ export default function ProjectTimeTracker() {
           <h3 className="text-lg font-semibold">
             Time Entries for {format(selectedDate, 'MMMM dd, yyyy')}
           </h3>
-          {!showAddForm && assignments.length > 0 && (
+          {!showAddForm && (assignments as ProjectAssignment[]).length > 0 && (
             <Button onClick={() => setShowAddForm(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Time Entry
