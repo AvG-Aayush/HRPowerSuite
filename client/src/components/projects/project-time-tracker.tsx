@@ -110,19 +110,19 @@ export default function ProjectTimeTracker() {
   });
 
   // Fetch user's project assignments
-  const { data: assignments = [] } = useQuery({
+  const { data: assignments = [], isLoading: assignmentsLoading, error: assignmentsError } = useQuery({
     queryKey: ['/api/user/project-assignments'],
     enabled: !!user,
   });
 
   // Fetch daily time entries
-  const { data: dailyTimeEntries = [], isLoading: timeEntriesLoading } = useQuery({
+  const { data: dailyTimeEntries = [], isLoading: timeEntriesLoading, error: timeEntriesError } = useQuery({
     queryKey: ['/api/user/daily-project-time', format(selectedDate, 'yyyy-MM-dd')],
     enabled: !!user,
   });
 
   // Fetch attendance for the day to get total working hours
-  const { data: attendance } = useQuery({
+  const { data: attendance, isLoading: attendanceLoading, error: attendanceError } = useQuery({
     queryKey: ['/api/attendance/today'],
     enabled: !!user,
   });
