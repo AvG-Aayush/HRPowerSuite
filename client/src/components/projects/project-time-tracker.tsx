@@ -42,12 +42,9 @@ interface AttendanceRecord {
   status: string;
 }
 
-interface ProjectAssignment {
+interface UserProject {
   id: number;
   projectId: number;
-  userId: number;
-  role: string;
-  isActive: boolean;
   projectName: string;
   projectStatus: string;
   projectPriority: string;
@@ -88,19 +85,19 @@ export default function ProjectTimeTracker() {
   const [timeAllocations, setTimeAllocations] = useState<TimeAllocation[]>([]);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Fetch user's project assignments
-  const { data: projectAssignments = [], isLoading: assignmentsLoading } = useQuery<ProjectAssignment[]>({
+  // Fetch user's projects
+  const { data: userProjects = [], isLoading: projectsLoading } = useQuery<UserProject[]>({
     queryKey: ['/api/user/project-assignments'],
     enabled: !!user,
   });
 
-  // Filter project assignments based on project date ranges and selected date
-  const getAvailableProjectsForDate = (projectAssignments: ProjectAssignment[], selectedDate: Date) => {
-    return projectAssignments.filter(assignment => {
+  // Filter projects based on project date ranges and selected date
+  const getAvailableProjectsForDate = (projects: UserProject[], selectedDate: Date) => {
+    return projects.filter(project => {
       // If project has no start date, consider it available from the beginning
-      const projectStartDate = assignment.projectStartDate ? new Date(assignment.projectStartDate) : null;
+      const projectStartDate = project.projectStartDate ? new Date(project.projectStartDate) : null;
       // If project has no end date, consider it available until now
-      const projectEndDate = assignment.projectEndDate ? new Date(assignment.projectEndDate) : null;
+      const projectEndDate = project.projectEndDate ? new Date(project.projectEndDate) : null;
       
       // Check if selected date falls within project date range
       const isAfterStart = !projectStartDate || selectedDate >= projectStartDate;
@@ -110,8 +107,8 @@ export default function ProjectTimeTracker() {
     });
   };
 
-  // Get filtered project assignments for the selected date
-  const availableProjects = getAvailableProjectsForDate(projectAssignments, selectedDate);
+  // Get filtered projects for the selected date
+  const availableProjects = getAvailableProjectsForDate(userProjects, selectedDate);
 
   // Fetch attendance record for selected date
   const { data: attendanceRecord, isLoading: attendanceLoading } = useQuery<AttendanceRecord>({
@@ -262,7 +259,7 @@ export default function ProjectTimeTracker() {
   const availableHours = attendanceRecord?.totalHours || 0;
   const remainingHours = availableHours - totalAllocatedHours;
 
-  if (assignmentsLoading || attendanceLoading || timeEntriesLoading) {
+  if (projectsLoading || attendanceLoading || timeEntriesLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
@@ -583,7 +580,7 @@ export default function ProjectTimeTracker() {
                       variant="outline"
                       onClick={addProjectAllocation}
                       className="w-full"
-                      disabled={assignments.length === timeAllocations.length}
+                      disabled={availableProjects.length === timeAllocations.length}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Another Project
