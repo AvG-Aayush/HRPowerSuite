@@ -429,13 +429,12 @@ export const projects = pgTable("projects", {
   priority: text("priority").notNull().default("medium"), // low, medium, high, critical
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
-  estimatedHours: real("estimated_hours"),
   actualHours: real("actual_hours").default(0),
   budget: real("budget"),
   spentBudget: real("spent_budget").default(0),
   clientName: text("client_name"),
   projectManagerId: integer("project_manager_id").references(() => users.id),
-  locations: text("locations"), // Comma-separated list of locations
+  locations: text("locations").array(), // Array of location strings
   createdBy: integer("created_by").notNull().references(() => users.id),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -936,6 +935,7 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
 }).extend({
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
+  locations: z.array(z.string()).optional().default([]),
 });
 
 export const insertProjectAssignmentSchema = createInsertSchema(projectAssignments).omit({

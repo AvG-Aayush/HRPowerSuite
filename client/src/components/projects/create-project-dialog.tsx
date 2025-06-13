@@ -49,10 +49,21 @@ const createProjectSchema = z.object({
   priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
-  estimatedHours: z.number().min(0).optional(),
   budget: z.number().min(0).optional(),
   clientName: z.string().optional(),
   projectManagerId: z.number().optional(),
+  locationsInput: z.string().optional(),
+}).transform((data) => {
+  // Transform comma-separated locations into array
+  const locations = data.locationsInput 
+    ? data.locationsInput.split(',').map(loc => loc.trim()).filter(loc => loc.length > 0)
+    : [];
+  
+  const { locationsInput, ...rest } = data;
+  return {
+    ...rest,
+    locations,
+  };
 });
 
 type CreateProjectData = z.infer<typeof createProjectSchema>;
@@ -383,28 +394,28 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="estimatedHours"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estimated Hours</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="locationsInput"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Locations</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter locations separated by commas (e.g., New York, London, Tokyo)"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-sm text-muted-foreground">
+                    <MapPin className="h-3 w-3 inline mr-1" />
+                    Separate multiple locations with commas
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="budget"
