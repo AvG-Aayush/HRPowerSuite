@@ -28,7 +28,6 @@ interface Project {
   priority: string;
   startDate: string;
   endDate: string;
-  estimatedHours: number;
   actualHours: number;
   budget: number;
   spentBudget: number;
@@ -215,8 +214,7 @@ export default function ProjectManagement() {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         <span>
-                          {project.actualHours || 0}
-                          {project.estimatedHours && ` / ${project.estimatedHours}`} hours
+                          {project.actualHours || 0} hours logged
                         </span>
                       </div>
 

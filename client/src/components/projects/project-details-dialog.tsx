@@ -147,7 +147,6 @@ export default function ProjectDetailsDialog({
       ...editForm,
       startDate: editForm.startDate && editForm.startDate.trim() !== '' ? new Date(editForm.startDate).toISOString() : null,
       endDate: editForm.endDate && editForm.endDate.trim() !== '' ? new Date(editForm.endDate).toISOString() : null,
-      estimatedHours: Number(editForm.estimatedHours) || 0,
       budget: Number(editForm.budget) || 0,
     };
     updateProjectMutation.mutate(updates);

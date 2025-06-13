@@ -1485,7 +1485,6 @@ export async function registerRoutes(app: Express) {
         endDate: new Date(projectRequestData.endDate),
         clientName: projectRequestData.clientName,
         budget: projectRequestData.budget,
-        estimatedHours: projectRequestData.estimatedHours,
         createdBy: req.user!.id
       };
       
