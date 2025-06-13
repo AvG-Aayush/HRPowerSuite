@@ -255,7 +255,7 @@ export async function registerRoutes(app: Express) {
       console.error('Check-in error:', error);
       res.status(400).json({ 
         error: 'Failed to check in',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
       });
     }
   });
@@ -486,7 +486,7 @@ export async function registerRoutes(app: Express) {
       res.status(201).json(message);
     } catch (error) {
       console.error('Message creation error:', error);
-      res.status(400).json({ error: 'Failed to send message', details: error.message });
+      res.status(400).json({ error: 'Failed to send message', details: process.env.NODE_ENV === 'development' ? String(error) : undefined });
     }
   });
 

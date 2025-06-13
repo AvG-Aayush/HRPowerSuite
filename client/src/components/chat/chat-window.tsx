@@ -40,21 +40,26 @@ export default function ChatWindow() {
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { recipientId: number; content: string }) => {
       const encryptedContent = encryptMessage(messageData.content);
-      return apiRequest('POST', '/api/messages', {
+      const response = await apiRequest('POST', '/api/messages', {
         recipientId: messageData.recipientId,
         content: encryptedContent,
         messageType: 'text',
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/messages/user', selectedUser?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/messages/unread-count'] });
       setMessage("");
-    },
-    onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to send message",
+        title: "Message Sent",
+        description: "Your message has been delivered successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Message Failed",
+        description: error.response?.data?.error || "Failed to send message",
         variant: "destructive",
       });
     },

@@ -55,8 +55,8 @@ export default function EnhancedAttendanceTracker() {
     queryKey: ["/api/user"],
   });
 
-  // Get today's attendance
-  const { data: todayAttendance, refetch: refetchTodayAttendance } = useQuery<AttendanceRecord[]>({
+  // Get today's attendance (returns single record or null)
+  const { data: userTodayAttendance, refetch: refetchTodayAttendance } = useQuery<AttendanceRecord | null>({
     queryKey: ["/api/attendance/today"],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
@@ -66,8 +66,6 @@ export default function EnhancedAttendanceTracker() {
     queryKey: ["/api/attendance/history", user?.id],
     enabled: !!user?.id,
   });
-
-  const userTodayAttendance = todayAttendance?.find(record => record.userId === user?.id);
 
   // Check-in/Check-out mutation
   const attendanceMutation = useMutation({
@@ -87,25 +85,44 @@ export default function EnhancedAttendanceTracker() {
       refetchTodayAttendance();
       queryClient.invalidateQueries({ queryKey: ['/api/attendance/history'] });
       
-      if (data.workingHours) {
+      if (data.workingSummary) {
+        // Handle checkout success with detailed summary
+        const { totalHours, overtimeHours, toilEarned, isWeekendWork } = data.workingSummary;
+        toast({
+          title: "Check-out Successful",
+          description: `Work completed: ${totalHours}h${overtimeHours > 0 ? ` (${overtimeHours}h overtime)` : ''}${toilEarned > 0 ? ` | TOIL earned: ${toilEarned}h` : ''}${isWeekendWork ? ' | Weekend work' : ''}`
+        });
+      } else if (data.workingHours) {
+        // Fallback for older response format
         toast({
           title: "Check-out Successful",
           description: `Work completed: ${data.workingHours}h${data.overtimeHours > 0 ? ` (${data.overtimeHours}h overtime)` : ''}`
         });
       } else {
+        // Check-in success
         toast({
           title: "Check-in Successful",
-          description: "Your attendance has been recorded"
+          description: data.message || "Your attendance has been recorded"
         });
       }
     },
     onError: (error: any) => {
       setIsProcessing(false);
-      toast({
-        title: "Failed",
-        description: error.message || "Failed to record attendance",
-        variant: "destructive"
-      });
+      
+      // Handle specific error cases
+      if (error.response?.data?.canCheckOut) {
+        toast({
+          title: "Already Checked In",
+          description: "You can now check out when ready",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Attendance Error",
+          description: error.response?.data?.error || error.message || "Failed to record attendance",
+          variant: "destructive"
+        });
+      }
     }
   });
 
