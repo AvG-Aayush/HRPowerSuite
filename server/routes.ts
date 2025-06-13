@@ -1591,7 +1591,7 @@ export async function registerRoutes(app: Express) {
       console.log(`Deleting project ${id}: ${existingProject.name}`);
       await storage.deleteProject(id);
       
-      console.log(`Project ${id} deleted successfully (set to inactive)`);
+      console.log(`Project ${id} permanently deleted from database`);
       res.json({ success: true, message: 'Project deleted successfully' });
     } catch (error) {
       console.error('Failed to delete project:', error);
