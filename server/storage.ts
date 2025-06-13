@@ -805,7 +805,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProject(id: number): Promise<void> {
-    await db.update(projects).set({ isActive: false }).where(eq(projects.id, id));
+    await db.delete(projects).where(eq(projects.id, id));
   }
 
   // Project assignments
