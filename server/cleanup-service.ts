@@ -89,7 +89,7 @@ export class CleanupService {
   }
 
   // Cleanup old requests - keep only latest 5 per user for each request type
-  private async cleanupOldRequests(requestType: 'leave' | 'overtime'): Promise<number> {
+  private async cleanupOldUserRequests(requestType: 'leave' | 'overtime'): Promise<number> {
     try {
       let deletedCount = 0;
       
