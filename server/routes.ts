@@ -1429,16 +1429,28 @@ export async function registerRoutes(app: Express) {
 
   app.post('/api/projects', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
     try {
+      console.log('Project creation request body:', req.body);
+      console.log('User creating project:', req.user?.id);
+      
       const projectData = insertProjectSchema.parse({
         ...req.body,
         createdBy: req.user!.id
       });
       
+      console.log('Parsed project data:', projectData);
+      
       const project = await storage.createProject(projectData);
       res.status(201).json(project);
     } catch (error) {
-      console.error('Failed to create project:', error);
-      res.status(400).json({ error: 'Failed to create project' });
+      console.error('Failed to create project - detailed error:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      res.status(400).json({ 
+        error: 'Failed to create project',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

@@ -120,13 +120,21 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
 
   const createProjectMutation = useMutation({
     mutationFn: (data: CreateProjectFormData) => {
-      // Transform form data using the schema
-      const transformedData = createProjectSchema.parse(data);
-      const projectData = {
-        ...transformedData,
-        createdBy: user?.id,
-      };
-      return apiRequest('/api/projects', 'POST', projectData);
+      console.log('Form data received:', data);
+      try {
+        // Transform form data using the schema
+        const transformedData = createProjectSchema.parse(data);
+        console.log('Transformed data:', transformedData);
+        const projectData = {
+          ...transformedData,
+          createdBy: user?.id,
+        };
+        console.log('Final project data:', projectData);
+        return apiRequest('/api/projects', 'POST', projectData);
+      } catch (error) {
+        console.error('Schema validation error:', error);
+        throw error;
+      }
     },
     onSuccess: async (project: any) => {
       // Assign selected employees to the project
@@ -152,10 +160,12 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
       setSelectedEmployees([]);
       setSelectedLocations([]);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Project creation error:', error);
+      const errorMessage = error?.response?.data?.details || error?.message || "Failed to create project. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to create project. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
