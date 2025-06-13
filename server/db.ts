@@ -20,7 +20,11 @@ const isSupabase = databaseUrl.includes('supabase.com');
 const isNeon = databaseUrl.includes('neon.tech');
 const isReplit = databaseUrl.includes('replit') || databaseUrl.includes('localhost');
 
-console.log(`Connecting to ${isSupabase ? 'Supabase' : isNeon ? 'Neon' : isReplit ? 'Replit PostgreSQL' : 'PostgreSQL'} database...`);
+if (isSupabase) {
+  console.log('Connecting to Supabase database...');
+} else {
+  console.log('Connecting to PostgreSQL database...');
+}
 
 export const pool = new Pool({ 
   connectionString: databaseUrl,
