@@ -210,44 +210,64 @@ export async function registerRoutes(app: Express) {
       });
 
       if (todayRecord && todayRecord.checkIn && !todayRecord.checkOut) {
-        return res.status(400).json({ error: 'Already checked in today', attendance: todayRecord });
+        return res.status(400).json({ 
+          error: 'Already checked in today', 
+          attendance: todayRecord,
+          canCheckOut: true 
+        });
       }
 
       // If there's a completed record for today, prevent new check-in
       if (todayRecord && todayRecord.checkOut) {
-        return res.status(400).json({ error: 'Already completed work for today', attendance: todayRecord });
+        return res.status(400).json({ 
+          error: 'Already completed work for today', 
+          attendance: todayRecord,
+          canCheckOut: false 
+        });
       }
 
+      const checkInTime = new Date();
       const attendanceData = {
         userId: req.user!.id,
-        checkIn: new Date(),
-        checkInLatitude: req.body.checkInLatitude || req.body.latitude,
-        checkInLongitude: req.body.checkInLongitude || req.body.longitude,
-        checkInLocation: req.body.checkInLocation || req.body.location,
-        checkInAddress: req.body.checkInAddress || req.body.address,
-        checkInAccuracy: req.body.checkInAccuracy || req.body.accuracy,
-        deviceInfo: req.body.deviceInfo,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
+        checkIn: checkInTime,
+        checkInLatitude: req.body.checkInLatitude || req.body.latitude || null,
+        checkInLongitude: req.body.checkInLongitude || req.body.longitude || null,
+        checkInLocation: req.body.checkInLocation || req.body.location || 'Manual Check-in',
+        checkInAddress: req.body.checkInAddress || req.body.address || null,
+        checkInAccuracy: req.body.checkInAccuracy || req.body.accuracy || null,
+        deviceInfo: req.body.deviceInfo || req.get('User-Agent'),
+        ipAddress: req.ip || 'Unknown',
+        userAgent: req.get('User-Agent') || 'Unknown',
         status: req.body.status || 'present',
-        date: new Date(),
-        checkInNotes: req.body.checkInNotes || req.body.notes,
-        isGpsVerified: req.body.isGpsVerified || false,
-        isLocationValid: req.body.isLocationValid || true,
-        requiresApproval: req.body.requiresApproval || false
+        date: checkInTime,
+        checkInNotes: req.body.checkInNotes || req.body.notes || null,
+        isGpsVerified: Boolean(req.body.isGpsVerified && req.body.latitude && req.body.longitude),
+        isLocationValid: req.body.isLocationValid !== false,
+        requiresApproval: Boolean(req.body.requiresApproval)
       };
 
       const attendance = await storage.createAttendance(attendanceData);
-      res.json(attendance);
+      res.status(201).json({
+        ...attendance,
+        message: 'Check-in successful'
+      });
     } catch (error) {
       console.error('Check-in error:', error);
-      res.status(400).json({ error: 'Failed to check in' });
+      res.status(400).json({ 
+        error: 'Failed to check in',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
   app.post('/api/attendance/checkout/:attendanceId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const attendanceId = parseInt(req.params.attendanceId);
+      
+      if (isNaN(attendanceId)) {
+        return res.status(400).json({ error: 'Invalid attendance ID' });
+      }
+
       const currentAttendance = await storage.getAttendanceById(attendanceId);
       
       if (!currentAttendance || currentAttendance.userId !== req.user!.id) {
@@ -255,33 +275,60 @@ export async function registerRoutes(app: Express) {
       }
 
       if (currentAttendance.checkOut) {
-        return res.status(400).json({ error: 'Already checked out today' });
+        return res.status(400).json({ 
+          error: 'Already checked out today', 
+          attendance: currentAttendance 
+        });
+      }
+
+      if (!currentAttendance.checkIn) {
+        return res.status(400).json({ error: 'No check-in record found' });
       }
 
       const checkOutTime = new Date();
-      const workingHours = currentAttendance.checkIn ? 
-        (checkOutTime.getTime() - new Date(currentAttendance.checkIn).getTime()) / (1000 * 60 * 60) : 0;
+      const checkInTime = new Date(currentAttendance.checkIn);
+      const workingMilliseconds = checkOutTime.getTime() - checkInTime.getTime();
+      const workingHours = Math.max(0, workingMilliseconds / (1000 * 60 * 60));
+
+      // Calculate overtime (over 8 hours) and TOIL eligibility
+      const overtimeHours = workingHours > 8 ? workingHours - 8 : 0;
+      const isWeekend = [0, 6].includes(checkInTime.getDay()); // Sunday = 0, Saturday = 6
 
       const updateData = {
         checkOut: checkOutTime,
-        checkOutLatitude: req.body.checkOutLatitude || req.body.latitude,
-        checkOutLongitude: req.body.checkOutLongitude || req.body.longitude,
-        checkOutLocation: req.body.checkOutLocation || req.body.location,
-        checkOutAddress: req.body.checkOutAddress || req.body.address,
-        checkOutAccuracy: req.body.checkOutAccuracy || req.body.accuracy,
-        checkOutNotes: req.body.checkOutNotes || req.body.notes,
+        checkOutLatitude: req.body.checkOutLatitude || req.body.latitude || null,
+        checkOutLongitude: req.body.checkOutLongitude || req.body.longitude || null,
+        checkOutLocation: req.body.checkOutLocation || req.body.location || 'Manual Check-out',
+        checkOutAddress: req.body.checkOutAddress || req.body.address || null,
+        checkOutAccuracy: req.body.checkOutAccuracy || req.body.accuracy || null,
+        checkOutNotes: req.body.checkOutNotes || req.body.notes || null,
         workingHours: Math.round(workingHours * 100) / 100,
-        overtimeHours: workingHours > 8 ? Math.round((workingHours - 8) * 100) / 100 : 0,
-        isToilEligible: workingHours > 8,
-        toilHoursEarned: workingHours > 8 ? Math.round((workingHours - 8) * 100) / 100 : 0,
-        status: 'completed'
+        overtimeHours: Math.round(overtimeHours * 100) / 100,
+        isToilEligible: overtimeHours > 0 || isWeekend,
+        toilHoursEarned: Math.round(Math.max(overtimeHours, isWeekend ? workingHours : 0) * 100) / 100,
+        isWeekendWork: isWeekend,
+        status: 'completed',
+        updatedAt: checkOutTime
       };
 
       const attendance = await storage.updateAttendance(attendanceId, updateData);
-      res.json(attendance);
+      
+      res.json({
+        ...attendance,
+        message: 'Check-out successful',
+        workingSummary: {
+          totalHours: updateData.workingHours,
+          overtimeHours: updateData.overtimeHours,
+          toilEarned: updateData.toilHoursEarned,
+          isWeekendWork: updateData.isWeekendWork
+        }
+      });
     } catch (error) {
       console.error('Check-out error:', error);
-      res.status(400).json({ error: 'Failed to check out' });
+      res.status(400).json({ 
+        error: 'Failed to check out',
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+      });
     }
   });
 
@@ -445,10 +492,26 @@ export async function registerRoutes(app: Express) {
 
   app.put('/api/messages/mark-read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { messageIds } = req.body;
-      await storage.markMessagesAsRead(req.user!.id, messageIds);
+      const { senderId, messageIds } = req.body;
+      
+      if (messageIds && Array.isArray(messageIds)) {
+        // Mark specific messages as read
+        await storage.markMessagesAsRead(req.user!.id, messageIds);
+      } else if (senderId) {
+        // Mark all messages from a specific sender as read
+        const messages = await storage.getMessagesByUser(req.user!.id, senderId);
+        const unreadMessageIds = messages
+          .filter(msg => !msg.isRead && msg.recipientId === req.user!.id)
+          .map(msg => msg.id);
+        
+        if (unreadMessageIds.length > 0) {
+          await storage.markMessagesAsRead(req.user!.id, unreadMessageIds);
+        }
+      }
+      
       res.json({ success: true });
     } catch (error) {
+      console.error('Mark messages as read error:', error);
       res.status(400).json({ error: 'Failed to mark messages as read' });
     }
   });
