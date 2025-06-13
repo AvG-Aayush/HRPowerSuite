@@ -86,14 +86,15 @@ export default function CreateProjectDialog({
         isActive: true,
       };
       
-      const project: any = await apiRequest('/api/projects', 'POST', projectData);
+      const response = await apiRequest('POST', '/api/projects', projectData);
+      const project: any = await response.json();
       const projectId = project.id || project.insertId;
       
       // Then create assignments
       if (data.assignedEmployees.length > 0 && projectId) {
         await Promise.all(
           data.assignedEmployees.map(userId => 
-            apiRequest('/api/projects/' + projectId + '/assignments', 'POST', {
+            apiRequest('POST', '/api/projects/' + projectId + '/assignments', {
               projectId: projectId,
               userId,
               role: 'team_member',
