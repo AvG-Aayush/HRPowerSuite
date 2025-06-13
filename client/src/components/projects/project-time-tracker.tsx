@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Calendar,
   Clock,
@@ -272,9 +274,27 @@ export default function ProjectTimeTracker() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Badge variant="outline" className="px-3 py-1">
-                {format(selectedDate, 'MMM dd, yyyy')}
-              </Badge>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="px-3 py-1 h-auto">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {format(selectedDate, 'MMM dd, yyyy')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <CalendarComponent
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(date);
+                      }
+                    }}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
               <Button
                 variant="outline"
                 size="sm"

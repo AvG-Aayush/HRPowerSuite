@@ -1513,24 +1513,57 @@ export async function registerRoutes(app: Express) {
   app.put('/api/projects/:id', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const updates = req.body;
+      
+      // Validate the update data
+      const updateSchema = insertProjectSchema.partial().omit({ createdBy: true });
+      const updates = updateSchema.parse(req.body);
       
       const project = await storage.updateProject(id, updates);
+      
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       res.json(project);
     } catch (error) {
       console.error('Failed to update project:', error);
-      res.status(400).json({ error: 'Failed to update project' });
+      if (error instanceof Error) {
+        res.status(400).json({ 
+          error: 'Failed to update project',
+          details: error.message 
+        });
+      } else {
+        res.status(400).json({ error: 'Failed to update project' });
+      }
     }
   });
 
   app.delete('/api/projects/:id', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid project ID' });
+      }
+      
+      // Check if project exists before deletion
+      const existingProject = await storage.getProjectById(id);
+      if (!existingProject) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       await storage.deleteProject(id);
-      res.json({ success: true });
+      res.json({ success: true, message: 'Project deleted successfully' });
     } catch (error) {
       console.error('Failed to delete project:', error);
-      res.status(400).json({ error: 'Failed to delete project' });
+      if (error instanceof Error) {
+        res.status(400).json({ 
+          error: 'Failed to delete project',
+          details: error.message 
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to delete project' });
+      }
     }
   });
 

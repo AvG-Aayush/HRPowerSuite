@@ -928,12 +928,19 @@ export const insertOvertimeRequestSchema = createInsertSchema(overtimeRequests).
 export const insertProjectSchema = createInsertSchema(projects, {
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
+  estimatedHours: z.coerce.number().optional().nullable(),
   budget: z.coerce.number().optional().nullable(),
   spentBudget: z.coerce.number().optional().default(0),
 }).omit({
   id: true,
+  actualHours: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  name: z.string().min(1, "Project name is required"),
+  description: z.string().min(1, "Project description is required"),
+  status: z.enum(["planning", "active", "on_hold", "completed", "cancelled"]).default("planning"),
+  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
 });
 
 export const insertProjectAssignmentSchema = createInsertSchema(projectAssignments).omit({
