@@ -31,7 +31,11 @@ function getOptionalEnvVar(name: string, fallback: string): string {
 }
 
 export function createAppConfig(): AppConfig {
-  const databaseUrl = getRequiredEnvVar('SUPABASE_DATABASE_URL');
+  const databaseUrl = process.env.DATABASE_URL;
+  
+  if (!databaseUrl || databaseUrl.trim() === '') {
+    throw new Error("DATABASE_URL must be set with a valid Supabase connection string");
+  }
   
   return {
     database: {
