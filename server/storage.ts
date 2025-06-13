@@ -958,7 +958,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserProjectTimeEntries(userId: number, date?: Date): Promise<ProjectTimeEntry[]> {
-    let query = db.select({
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      return await db.select({
+        id: projectTimeEntries.id,
+        projectId: projectTimeEntries.projectId,
+        userId: projectTimeEntries.userId,
+        attendanceId: projectTimeEntries.attendanceId,
+        date: projectTimeEntries.date,
+        hoursSpent: projectTimeEntries.hoursSpent,
+        description: projectTimeEntries.description,
+        taskType: projectTimeEntries.taskType,
+        billableHours: projectTimeEntries.billableHours,
+        status: projectTimeEntries.status,
+        approvedBy: projectTimeEntries.approvedBy,
+        approvedAt: projectTimeEntries.approvedAt,
+        rejectionReason: projectTimeEntries.rejectionReason,
+        createdAt: projectTimeEntries.createdAt,
+        updatedAt: projectTimeEntries.updatedAt,
+        projectName: projects.name,
+        projectStatus: projects.status
+      })
+      .from(projectTimeEntries)
+      .innerJoin(projects, eq(projectTimeEntries.projectId, projects.id))
+      .where(and(
+        eq(projectTimeEntries.userId, userId),
+        gte(projectTimeEntries.date, startOfDay),
+        lte(projectTimeEntries.date, endOfDay)
+      ))
+      .orderBy(desc(projectTimeEntries.date));
+    }
+
+    return await db.select({
       id: projectTimeEntries.id,
       projectId: projectTimeEntries.projectId,
       userId: projectTimeEntries.userId,
@@ -979,22 +1014,8 @@ export class DatabaseStorage implements IStorage {
     })
     .from(projectTimeEntries)
     .innerJoin(projects, eq(projectTimeEntries.projectId, projects.id))
-    .where(eq(projectTimeEntries.userId, userId));
-
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      query = query.where(and(
-        eq(projectTimeEntries.userId, userId),
-        gte(projectTimeEntries.date, startOfDay),
-        lte(projectTimeEntries.date, endOfDay)
-      ));
-    }
-
-    return await query.orderBy(desc(projectTimeEntries.date));
+    .where(eq(projectTimeEntries.userId, userId))
+    .orderBy(desc(projectTimeEntries.date));
   }
 
   async updateProjectTimeEntry(id: number, updates: Partial<ProjectTimeEntry>): Promise<ProjectTimeEntry> {
