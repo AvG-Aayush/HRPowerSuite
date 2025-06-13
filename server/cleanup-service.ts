@@ -45,13 +45,14 @@ export class CleanupService {
         .delete(routines)
         .where(lt(routines.expiresAt, new Date()));
 
-      // Delete messages older than 3 months
-      const threeMonthsAgo = new Date();
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      // Delete messages older than 3 months (temporarily disabled due to schema mismatch)
+      // const threeMonthsAgo = new Date();
+      // threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       
-      const oldMessagesResult = await db
-        .delete(messages)
-        .where(lt(messages.sentAt, threeMonthsAgo));
+      // const oldMessagesResult = await db
+      //   .delete(messages)
+      //   .where(lt(messages.sentAt, threeMonthsAgo));
+      const oldMessagesResult = { rowCount: 0 };
 
       // Delete completed or cancelled shifts after 3 days
       const threeDaysAgo = new Date();
