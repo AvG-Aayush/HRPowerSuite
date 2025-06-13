@@ -42,7 +42,7 @@ import { CalendarIcon, X, Plus, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-const createProjectSchema = z.object({
+const createProjectFormSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   description: z.string().optional(),
   status: z.enum(["planning", "active", "on_hold", "completed", "cancelled"]).default("planning"),
@@ -53,7 +53,9 @@ const createProjectSchema = z.object({
   clientName: z.string().optional(),
   projectManagerId: z.number().optional(),
   locationsInput: z.string().optional(),
-}).transform((data) => {
+});
+
+const createProjectSchema = createProjectFormSchema.transform((data) => {
   // Transform comma-separated locations into array
   const locations = data.locationsInput 
     ? data.locationsInput.split(',').map(loc => loc.trim()).filter(loc => loc.length > 0)
@@ -66,6 +68,7 @@ const createProjectSchema = z.object({
   };
 });
 
+type CreateProjectFormData = z.infer<typeof createProjectFormSchema>;
 type CreateProjectData = z.infer<typeof createProjectSchema>;
 
 interface User {
@@ -95,8 +98,8 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<number[]>([]);
 
-  const form = useForm<CreateProjectData>({
-    resolver: zodResolver(createProjectSchema),
+  const form = useForm<CreateProjectFormData>({
+    resolver: zodResolver(createProjectFormSchema),
     defaultValues: {
       status: "planning",
       priority: "medium",
@@ -104,47 +107,36 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
   });
 
   // Fetch users for project manager and employee assignment
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<User[]>({
     queryKey: ['/api/users'],
     enabled: open,
   });
 
   // Fetch work locations
-  const { data: workLocations = [] } = useQuery({
+  const { data: workLocations = [] } = useQuery<WorkLocation[]>({
     queryKey: ['/api/work-locations'],
     enabled: open,
   });
 
   const createProjectMutation = useMutation({
-    mutationFn: (data: CreateProjectData) => apiRequest('/api/projects', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-    onSuccess: async (project) => {
+    mutationFn: (data: CreateProjectFormData) => {
+      // Transform form data using the schema
+      const transformedData = createProjectSchema.parse(data);
+      const projectData = {
+        ...transformedData,
+        createdBy: user?.id,
+      };
+      return apiRequest('/api/projects', 'POST', projectData);
+    },
+    onSuccess: async (project: any) => {
       // Assign selected employees to the project
       if (selectedEmployees.length > 0) {
         await Promise.all(
           selectedEmployees.map(userId =>
-            apiRequest(`/api/projects/${project.id}/assignments`, {
-              method: 'POST',
-              body: JSON.stringify({
-                userId,
-                role: 'team_member',
-              }),
-            })
-          )
-        );
-      }
-
-      // Assign selected locations to the project
-      if (selectedLocations.length > 0) {
-        await Promise.all(
-          selectedLocations.map(workLocationId =>
-            apiRequest(`/api/projects/${project.id}/locations`, {
-              method: 'POST',
-              body: JSON.stringify({
-                workLocationId,
-              }),
+            apiRequest(`/api/projects/${project.id}/assignments`, 'POST', {
+              userId,
+              role: 'team_member',
+              assignedBy: user?.id,
             })
           )
         );
@@ -191,14 +183,14 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
 
   const getSelectedEmployeeNames = () => {
     return users
-      .filter((user: User) => selectedEmployees.includes(user.id))
-      .map((user: User) => user.fullName);
+      .filter((user) => selectedEmployees.includes(user.id))
+      .map((user) => user.fullName);
   };
 
   const getSelectedLocationNames = () => {
     return workLocations
-      .filter((location: WorkLocation) => selectedLocations.includes(location.id))
-      .map((location: WorkLocation) => location.name);
+      .filter((location) => selectedLocations.includes(location.id))
+      .map((location) => location.name);
   };
 
   return (
