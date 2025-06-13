@@ -46,7 +46,7 @@ export default function MonthlyAttendanceHistory() {
   const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
   
   const isAdminOrHR = user?.role === 'admin' || user?.role === 'hr';
-  const displayUserId = selectedEmployee || user?.id;
+  const displayUserId = isAdminOrHR ? (selectedEmployee || user?.id) : user?.id;
 
   // Get all employees for admin/HR users
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -200,7 +200,7 @@ export default function MonthlyAttendanceHistory() {
   return (
     <div className="space-y-6">
       {/* Header Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between no-print">
         <div>
           <h2 className="text-2xl font-bold">Monthly Attendance Report</h2>
           <p className="text-muted-foreground">
@@ -244,11 +244,42 @@ export default function MonthlyAttendanceHistory() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+          
+          <Separator orientation="vertical" className="h-8" />
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      {/* Printable Content */}
+      <div id="monthly-report-content">
+        {/* Report Header for Print */}
+        <div className="header text-center mb-6 print-only" style={{ display: 'none' }}>
+          <h1>Monthly Attendance Report</h1>
+          <h2>{selectedEmployeeName}</h2>
+          <h3>{format(selectedMonth, 'MMMM yyyy')}</h3>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 stats">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -449,6 +480,7 @@ export default function MonthlyAttendanceHistory() {
           </ScrollArea>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
