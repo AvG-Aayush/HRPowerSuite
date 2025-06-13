@@ -15,14 +15,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
+import { insertOvertimeRequestSchema } from "@shared/schema";
 
-const overtimeRequestSchema = z.object({
-  date: z.string().min(1, "Date is required"),
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
-  reason: z.string().min(10, "Reason must be at least 10 characters"),
-  project: z.string().optional(),
-  estimatedHours: z.number().min(0.5, "Minimum 0.5 hours").max(16, "Maximum 16 hours"),
+const overtimeRequestSchema = insertOvertimeRequestSchema.omit({
+  userId: true,
+  status: true,
+  approvedBy: true,
+  rejectionReason: true,
+  actualHoursWorked: true,
+  toilHoursAwarded: true,
+  processedAt: true,
+}).extend({
+  requestedDate: z.string().min(1, "Date is required"),
 });
 
 type OvertimeRequestForm = z.infer<typeof overtimeRequestSchema>;
@@ -36,12 +40,14 @@ export default function OvertimeRequests() {
   const form = useForm<OvertimeRequestForm>({
     resolver: zodResolver(overtimeRequestSchema),
     defaultValues: {
-      date: "",
+      requestedDate: "",
       startTime: "",
       endTime: "",
       reason: "",
-      project: "",
+      workDescription: "",
       estimatedHours: 1,
+      isWeekend: false,
+      isHoliday: false,
     },
   });
 
@@ -58,7 +64,11 @@ export default function OvertimeRequests() {
   // Create overtime request mutation
   const createMutation = useMutation({
     mutationFn: async (data: OvertimeRequestForm) => {
-      const res = await apiRequest('/api/overtime-requests', 'POST', data);
+      const requestData = {
+        ...data,
+        requestedDate: new Date(data.requestedDate).toISOString(),
+      };
+      const res = await apiRequest('/api/overtime-requests', 'POST', requestData);
       return await res.json();
     },
     onSuccess: () => {
@@ -164,7 +174,7 @@ export default function OvertimeRequests() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="date"
+                  name="requestedDate"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Date</FormLabel>
@@ -225,12 +235,16 @@ export default function OvertimeRequests() {
                 />
                 <FormField
                   control={form.control}
-                  name="project"
+                  name="workDescription"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Project (Optional)</FormLabel>
+                      <FormLabel>Work Description</FormLabel>
                       <FormControl>
-                        <Input placeholder="Project name or code" {...field} />
+                        <Textarea 
+                          placeholder="Describe the work you'll be doing during overtime..."
+                          className="min-h-[100px]"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
