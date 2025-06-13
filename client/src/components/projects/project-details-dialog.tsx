@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -8,22 +10,39 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Calendar,
-  Users,
-  MapPin,
   Clock,
   DollarSign,
-  User,
-  Settings,
-  Edit,
-  Trash2
+  Users,
+  Edit3,
+  Trash2,
+  Save,
+  X,
+  User
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -47,436 +66,445 @@ interface Project {
   updatedAt: string;
 }
 
-interface ProjectAssignment {
-  id: number;
-  projectId: number;
-  userId: number;
-  role: string;
-  assignedHours: number;
-  actualHours: number;
-  hourlyRate: number;
-  isActive: boolean;
-  assignedBy: number;
-  assignedAt: string;
-  removedAt: string;
-  userName: string;
-  userEmail: string;
-  userRole: string;
-  department: string;
-}
 
-interface ProjectLocation {
-  id: number;
-  projectId: number;
-  workLocationId: number;
-  isActive: boolean;
-  createdAt: string;
-  locationName: string;
-  locationAddress: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-}
-
-interface ProjectTimeEntry {
-  id: number;
-  projectId: number;
-  userId: number;
-  attendanceId: number;
-  date: string;
-  hoursSpent: number;
-  description: string;
-  taskType: string;
-  billableHours: number;
-  status: string;
-  approvedBy: number;
-  approvedAt: string;
-  rejectionReason: string;
-  createdAt: string;
-  updatedAt: string;
-  userName: string;
-  userEmail: string;
-}
 
 interface ProjectDetailsDialogProps {
   project: Project;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isAdminOrHR: boolean;
 }
 
-export default function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDetailsDialogProps) {
+export default function ProjectDetailsDialog({ 
+  project, 
+  open, 
+  onOpenChange,
+  isAdminOrHR
+}: ProjectDetailsDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const isAdminOrHR = user?.role === 'admin' || user?.role === 'hr';
-
-  // Fetch project assignments
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
-    queryKey: ['/api/projects', project.id, 'assignments'],
-    enabled: open && !!project.id,
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: project.name,
+    description: project.description,
+    status: project.status,
+    priority: project.priority,
+    startDate: project.startDate ? project.startDate.split('T')[0] : '',
+    endDate: project.endDate ? project.endDate.split('T')[0] : '',
+    estimatedHours: project.estimatedHours || 0,
+    budget: project.budget || 0,
+    clientName: project.clientName || '',
   });
 
-  // Fetch project locations
-  const { data: locations = [], isLoading: locationsLoading } = useQuery({
-    queryKey: ['/api/projects', project.id, 'locations'],
-    enabled: open && !!project.id,
-  });
 
-  // Fetch project time entries
-  const { data: timeEntries = [], isLoading: timeEntriesLoading } = useQuery({
-    queryKey: ['/api/projects', project.id, 'time-entries'],
-    enabled: open && !!project.id,
-  });
 
-  const removeAssignmentMutation = useMutation({
-    mutationFn: (userId: number) => 
-      apiRequest(`/api/projects/${project.id}/assignments/${userId}`, {
-        method: 'DELETE',
-      }),
+  // Update project mutation
+  const updateProjectMutation = useMutation({
+    mutationFn: async (updates: any) => {
+      return apiRequest(`/api/projects/${project.id}`, 'PUT', updates);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/projects', project.id, 'assignments'] });
-      toast({
-        title: "Assignment Removed",
-        description: "User has been removed from the project.",
-      });
+      toast({ title: "Project updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      setIsEditing(false);
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to remove assignment.",
-        variant: "destructive",
+      toast({ 
+        title: "Failed to update project",
+        variant: "destructive" 
       });
     },
   });
 
-  const removeLocationMutation = useMutation({
-    mutationFn: (locationId: number) => 
-      apiRequest(`/api/projects/${project.id}/locations/${locationId}`, {
-        method: 'DELETE',
-      }),
+  // Delete project mutation
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/projects/${project.id}`, 'DELETE');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/projects', project.id, 'locations'] });
-      toast({
-        title: "Location Removed",
-        description: "Location has been removed from the project.",
-      });
+      toast({ title: "Project deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      onOpenChange(false);
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to remove location.",
-        variant: "destructive",
+      toast({ 
+        title: "Failed to delete project",
+        variant: "destructive" 
       });
     },
   });
 
-  const getStatusBadge = (status: string) => {
-    const statusColors = {
-      planning: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-      active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-      on_hold: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-      completed: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
-      cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+  const handleSave = () => {
+    const updates = {
+      ...editForm,
+      startDate: editForm.startDate ? new Date(editForm.startDate).toISOString() : null,
+      endDate: editForm.endDate ? new Date(editForm.endDate).toISOString() : null,
+      estimatedHours: Number(editForm.estimatedHours),
+      budget: Number(editForm.budget),
     };
-    return statusColors[status as keyof typeof statusColors] || "bg-gray-100 text-gray-800";
+    updateProjectMutation.mutate(updates);
   };
 
-  const getPriorityBadge = (priority: string) => {
-    const priorityColors = {
-      low: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
-      medium: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-      high: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
-      critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-    };
-    return priorityColors[priority as keyof typeof priorityColors] || "bg-gray-100 text-gray-800";
+  const handleDelete = () => {
+    deleteProjectMutation.mutate();
   };
 
-  const getTaskTypeBadge = (taskType: string) => {
-    const taskTypeColors = {
-      development: "bg-blue-100 text-blue-800",
-      design: "bg-purple-100 text-purple-800",
-      testing: "bg-green-100 text-green-800",
-      meeting: "bg-yellow-100 text-yellow-800",
-      planning: "bg-orange-100 text-orange-800",
-      documentation: "bg-gray-100 text-gray-800",
-    };
-    return taskTypeColors[taskType as keyof typeof taskTypeColors] || "bg-gray-100 text-gray-800";
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'planning': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'on_hold': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'completed': return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      case 'cancelled': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
   };
 
-  const progressPercentage = project.estimatedHours > 0 
-    ? Math.min(100, ((project.actualHours || 0) / project.estimatedHours) * 100)
-    : 0;
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'low': return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      case 'medium': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
 
-  const budgetPercentage = project.budget > 0 
-    ? Math.min(100, ((project.spentBudget || 0) / project.budget) * 100)
-    : 0;
+  const formatCurrency = (amount: number | null) => {
+    if (!amount) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <DialogTitle className="text-2xl font-bold">{project.name}</DialogTitle>
-              <DialogDescription className="mt-2">
-                {project.description}
-              </DialogDescription>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl">{project.name}</DialogTitle>
+                <DialogDescription>
+                  Created {format(new Date(project.createdAt), 'PPP')}
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className={getStatusColor(project.status)}>
+                  {project.status.replace('_', ' ')}
+                </Badge>
+                <Badge className={getPriorityColor(project.priority)}>
+                  {project.priority}
+                </Badge>
+                {isAdminOrHR && (
+                  <div className="flex gap-2 ml-4">
+                    {!isEditing ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsEditing(true)}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDeleteDialog(true)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={handleSave}
+                          disabled={updateProjectMutation.isPending}
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsEditing(false)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex flex-col gap-2 ml-4">
-              <Badge className={getStatusBadge(project.status)}>
-                {project.status.replace('_', ' ')}
-              </Badge>
-              <Badge className={getPriorityBadge(project.priority)}>
-                {project.priority}
-              </Badge>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Project Details */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Project Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isEditing ? (
+                    <>
+                      <div>
+                        <Label htmlFor="name">Project Name</Label>
+                        <Input
+                          id="name"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={editForm.description}
+                          onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                          rows={3}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="status">Status</Label>
+                          <Select
+                            value={editForm.status}
+                            onValueChange={(value) => setEditForm({...editForm, status: value})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="planning">Planning</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="on_hold">On Hold</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="priority">Priority</Label>
+                          <Select
+                            value={editForm.priority}
+                            onValueChange={(value) => setEditForm({...editForm, priority: value})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                              <SelectItem value="critical">Critical</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="clientName">Client Name</Label>
+                        <Input
+                          id="clientName"
+                          value={editForm.clientName}
+                          onChange={(e) => setEditForm({...editForm, clientName: e.target.value})}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <h4 className="font-medium text-sm text-muted-foreground">Description</h4>
+                        <p className="mt-1">{project.description}</p>
+                      </div>
+                      {project.clientName && (
+                        <div>
+                          <h4 className="font-medium text-sm text-muted-foreground">Client</h4>
+                          <p className="mt-1">{project.clientName}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Timeline & Budget */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Timeline & Budget</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isEditing ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="startDate">Start Date</Label>
+                          <Input
+                            id="startDate"
+                            type="date"
+                            value={editForm.startDate}
+                            onChange={(e) => setEditForm({...editForm, startDate: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="endDate">End Date</Label>
+                          <Input
+                            id="endDate"
+                            type="date"
+                            value={editForm.endDate}
+                            onChange={(e) => setEditForm({...editForm, endDate: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="estimatedHours">Estimated Hours</Label>
+                          <Input
+                            id="estimatedHours"
+                            type="number"
+                            value={editForm.estimatedHours}
+                            onChange={(e) => setEditForm({...editForm, estimatedHours: Number(e.target.value)})}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="budget">Budget ($)</Label>
+                          <Input
+                            id="budget"
+                            type="number"
+                            value={editForm.budget}
+                            onChange={(e) => setEditForm({...editForm, budget: Number(e.target.value)})}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        {project.startDate && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Timeline</p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(project.startDate), 'MMM dd, yyyy')}
+                                {project.endDate && ` - ${format(new Date(project.endDate), 'MMM dd, yyyy')}`}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">Hours</p>
+                            <p className="text-sm text-muted-foreground">
+                              {project.actualHours || 0}
+                              {project.estimatedHours && ` / ${project.estimatedHours}`} hours
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        {project.budget && (
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Budget</p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatCurrency(project.spentBudget || 0)} / {formatCurrency(project.budget)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Project Stats */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Progress
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Time Progress</span>
+                        <span>
+                          {project.actualHours || 0}
+                          {project.estimatedHours && ` / ${project.estimatedHours}`} hours
+                        </span>
+                      </div>
+                      {project.estimatedHours && (
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{ 
+                              width: `${Math.min(((project.actualHours || 0) / project.estimatedHours) * 100, 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {project.budget && (
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span>Budget Usage</span>
+                          <span>
+                            {formatCurrency(project.spentBudget || 0)} / {formatCurrency(project.budget)}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-green-600 h-2 rounded-full" 
+                            style={{ 
+                              width: `${Math.min(((project.spentBudget || 0) / project.budget) * 100, 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{project.actualHours || 0}h / {project.estimatedHours || 0}h</span>
-              </div>
-              {project.estimatedHours > 0 && (
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progressPercentage}%` }}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {project.budget > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Budget</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">${project.spentBudget || 0} / ${project.budget}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${budgetPercentage}%` }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {project.startDate && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Start Date</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{format(new Date(project.startDate), 'MMM dd, yyyy')}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {project.endDate && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">End Date</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{format(new Date(project.endDate), 'MMM dd, yyyy')}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        <Tabs defaultValue="assignments" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="assignments">Team Members</TabsTrigger>
-            <TabsTrigger value="locations">Locations</TabsTrigger>
-            <TabsTrigger value="timeEntries">Time Entries</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="assignments" className="space-y-4">
-            {assignmentsLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : assignments.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Users className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Team Members</h3>
-                  <p className="text-muted-foreground text-center">
-                    No team members have been assigned to this project yet.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {assignments.map((assignment: ProjectAssignment) => (
-                  <Card key={assignment.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{assignment.userName}</h4>
-                            <p className="text-sm text-muted-foreground">{assignment.userEmail}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline">{assignment.role.replace('_', ' ')}</Badge>
-                              <Badge variant="outline">{assignment.userRole}</Badge>
-                              {assignment.department && (
-                                <Badge variant="outline">{assignment.department}</Badge>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span>{assignment.actualHours || 0}h / {assignment.assignedHours || 0}h</span>
-                            </div>
-                            {assignment.hourlyRate && (
-                              <div className="flex items-center gap-2 text-sm mt-1">
-                                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                <span>${assignment.hourlyRate}/hr</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        {isAdminOrHR && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeAssignmentMutation.mutate(assignment.userId)}
-                            disabled={removeAssignmentMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="locations" className="space-y-4">
-            {locationsLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : locations.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <MapPin className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Locations</h3>
-                  <p className="text-muted-foreground text-center">
-                    No work locations have been assigned to this project yet.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {locations.map((location: ProjectLocation) => (
-                  <Card key={location.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <MapPin className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <h4 className="font-semibold">{location.locationName}</h4>
-                            <p className="text-sm text-muted-foreground">{location.locationAddress}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Radius: {location.radius}m
-                            </p>
-                          </div>
-                        </div>
-                        {isAdminOrHR && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeLocationMutation.mutate(location.workLocationId)}
-                            disabled={removeLocationMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="timeEntries" className="space-y-4">
-            {timeEntriesLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : timeEntries.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Clock className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Time Entries</h3>
-                  <p className="text-muted-foreground text-center">
-                    No time has been logged for this project yet.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {timeEntries.map((entry: ProjectTimeEntry) => (
-                  <Card key={entry.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold">{entry.userName}</h4>
-                            <Badge className={getTaskTypeBadge(entry.taskType)}>
-                              {entry.taskType}
-                            </Badge>
-                            <Badge variant={entry.status === 'approved' ? 'default' : entry.status === 'pending' ? 'secondary' : 'destructive'}>
-                              {entry.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {format(new Date(entry.date), 'MMM dd, yyyy')} • {entry.hoursSpent}h logged
-                            {entry.billableHours && ` • ${entry.billableHours}h billable`}
-                          </p>
-                          {entry.description && (
-                            <p className="text-sm">{entry.description}</p>
-                          )}
-                          {entry.rejectionReason && (
-                            <p className="text-sm text-red-600 mt-2">
-                              Rejection reason: {entry.rejectionReason}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{project.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={deleteProjectMutation.isPending}
+            >
+              Delete Project
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

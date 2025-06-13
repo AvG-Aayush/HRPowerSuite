@@ -441,15 +441,12 @@ export const projects = pgTable("projects", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// Project assignments - linking employees to projects
+// Project assignments - simple linking of employees to projects (view only)
 export const projectAssignments = pgTable("project_assignments", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull().references(() => projects.id),
   userId: integer("user_id").notNull().references(() => users.id),
   role: text("role").notNull().default("team_member"), // team_member, lead, analyst, designer, developer
-  assignedHours: real("assigned_hours"), // estimated hours for this person
-  actualHours: real("actual_hours").default(0), // tracked hours
-  hourlyRate: real("hourly_rate"), // billing rate for this person on this project
   isActive: boolean("is_active").notNull().default(true),
   assignedBy: integer("assigned_by").notNull().references(() => users.id),
   assignedAt: timestamp("assigned_at").notNull().defaultNow(),
