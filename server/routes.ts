@@ -457,9 +457,21 @@ export async function registerRoutes(app: Express) {
   app.get('/api/messages/user/:userId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const otherUserId = parseInt(req.params.userId);
+      
+      if (isNaN(otherUserId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+
+      // Verify the other user exists
+      const otherUser = await storage.getUser(otherUserId);
+      if (!otherUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
       const messages = await storage.getMessagesByUser(req.user!.id, otherUserId);
       res.json(messages);
     } catch (error) {
+      console.error('Failed to fetch messages:', error);
       res.status(500).json({ error: 'Failed to fetch messages' });
     }
   });
@@ -467,53 +479,59 @@ export async function registerRoutes(app: Express) {
   app.get('/api/messages/group/:groupId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const groupId = parseInt(req.params.groupId);
+      
+      if (isNaN(groupId)) {
+        return res.status(400).json({ error: 'Invalid group ID' });
+      }
+
       const messages = await storage.getMessagesByGroup(groupId);
       res.json(messages);
     } catch (error) {
+      console.error('Failed to fetch group messages:', error);
       res.status(500).json({ error: 'Failed to fetch group messages' });
     }
   });
 
   app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Validate required fields
+      if (!req.body.content || req.body.content.trim() === '') {
+        return res.status(400).json({ error: 'Message content is required' });
+      }
+
+      if (!req.body.recipientId && !req.body.groupId) {
+        return res.status(400).json({ error: 'Either recipientId or groupId is required' });
+      }
+
       const messageData = insertMessageSchema.parse({
         ...req.body,
         senderId: req.user!.id,
         sentAt: new Date(),
         deliveryStatus: 'sent',
-        retryCount: 0
+        retryCount: 0,
+        isRead: false,
+        isDeleted: false
       });
       
       const message = await storage.createMessage(messageData);
       
-      // Create delivery log entry
+      // Create delivery log entry for direct messages
       if (message.recipientId) {
-        await storage.createMessageDeliveryLog({
-          messageId: message.id,
-          recipientId: message.recipientId,
-          deliveryStatus: 'pending',
-          attemptCount: 1
-        });
+        try {
+          await storage.createMessageDeliveryLog({
+            messageId: message.id,
+            recipientId: message.recipientId,
+            deliveryStatus: 'delivered',
+            attemptCount: 1
+          });
+        } catch (logError) {
+          console.error('Failed to create delivery log:', logError);
+        }
       }
       
       res.status(201).json(message);
     } catch (error) {
       console.error('Message creation error:', error);
-      
-      // Log the failed message attempt
-      if (req.body.recipientId) {
-        try {
-          await storage.createMessageDeliveryLog({
-            messageId: 0, // Temporary ID for failed message
-            recipientId: parseInt(req.body.recipientId),
-            deliveryStatus: 'failed',
-            errorMessage: error instanceof Error ? error.message : 'Unknown error',
-            attemptCount: 1
-          });
-        } catch (logError) {
-          console.error('Failed to log message delivery error:', logError);
-        }
-      }
       
       res.status(400).json({ 
         error: 'Failed to send message', 
@@ -528,10 +546,17 @@ export async function registerRoutes(app: Express) {
       
       if (messageIds && Array.isArray(messageIds)) {
         // Mark specific messages as read
-        await storage.markMessagesAsRead(req.user!.id, messageIds);
+        if (messageIds.length > 0) {
+          await storage.markMessagesAsRead(req.user!.id, messageIds);
+        }
       } else if (senderId) {
         // Mark all messages from a specific sender as read
-        const messages = await storage.getMessagesByUser(req.user!.id, senderId);
+        const senderIdNum = parseInt(senderId);
+        if (isNaN(senderIdNum)) {
+          return res.status(400).json({ error: 'Invalid sender ID' });
+        }
+
+        const messages = await storage.getMessagesByUser(req.user!.id, senderIdNum);
         const unreadMessageIds = messages
           .filter(msg => !msg.isRead && msg.recipientId === req.user!.id)
           .map(msg => msg.id);
@@ -539,6 +564,8 @@ export async function registerRoutes(app: Express) {
         if (unreadMessageIds.length > 0) {
           await storage.markMessagesAsRead(req.user!.id, unreadMessageIds);
         }
+      } else {
+        return res.status(400).json({ error: 'Either senderId or messageIds must be provided' });
       }
       
       res.json({ success: true });
@@ -553,7 +580,43 @@ export async function registerRoutes(app: Express) {
       const count = await storage.getUnreadMessageCount(req.user!.id);
       res.json({ count });
     } catch (error) {
+      console.error('Failed to get unread count:', error);
       res.status(500).json({ error: 'Failed to get unread count' });
+    }
+  });
+
+  // Get message delivery status
+  app.get('/api/messages/:messageId/delivery-status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      
+      if (isNaN(messageId)) {
+        return res.status(400).json({ error: 'Invalid message ID' });
+      }
+
+      const deliveryStatus = await storage.getMessageDeliveryStatus(messageId);
+      res.json(deliveryStatus);
+    } catch (error) {
+      console.error('Failed to get delivery status:', error);
+      res.status(500).json({ error: 'Failed to get delivery status' });
+    }
+  });
+
+  // Update message delivery status (for system use)
+  app.put('/api/messages/:messageId/delivery-status', requireAuth, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const { recipientId, status, errorMessage } = req.body;
+      
+      if (isNaN(messageId)) {
+        return res.status(400).json({ error: 'Invalid message ID' });
+      }
+
+      await storage.updateMessageDeliveryStatus(messageId, recipientId, status, errorMessage);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to update delivery status:', error);
+      res.status(500).json({ error: 'Failed to update delivery status' });
     }
   });
 
