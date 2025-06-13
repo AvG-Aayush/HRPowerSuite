@@ -1539,11 +1539,19 @@ export async function registerRoutes(app: Express) {
         return res.status(404).json({ error: 'Project not found' });
       }
       
-      // Validate the update data
+      // Validate the update data and convert date strings to Date objects
       const updates = {
         ...req.body,
         updatedAt: new Date()
       };
+      
+      // Convert date strings to Date objects if present
+      if (updates.startDate && typeof updates.startDate === 'string') {
+        updates.startDate = new Date(updates.startDate);
+      }
+      if (updates.endDate && typeof updates.endDate === 'string') {
+        updates.endDate = new Date(updates.endDate);
+      }
       
       const project = await storage.updateProject(id, updates);
       
