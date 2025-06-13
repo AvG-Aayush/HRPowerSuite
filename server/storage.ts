@@ -1021,6 +1021,40 @@ export class DatabaseStorage implements IStorage {
     ))
     .orderBy(asc(projectTimeEntries.createdAt));
   }
+
+  async getAttendanceByUserAndDate(userId: number, date: string): Promise<any> {
+    const targetDate = new Date(date);
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [attendanceRecord] = await db.select()
+      .from(attendance)
+      .where(and(
+        eq(attendance.userId, userId),
+        gte(attendance.date, startOfDay),
+        lte(attendance.date, endOfDay)
+      ))
+      .limit(1);
+
+    return attendanceRecord || null;
+  }
+
+  async deleteProjectTimeEntriesByUserAndDate(userId: number, date: string): Promise<void> {
+    const targetDate = new Date(date);
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    await db.delete(projectTimeEntries)
+      .where(and(
+        eq(projectTimeEntries.userId, userId),
+        gte(projectTimeEntries.date, startOfDay),
+        lte(projectTimeEntries.date, endOfDay)
+      ));
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -1688,5 +1688,53 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Get attendance record for a specific date
+  app.get('/api/attendance/date/:date', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const date = req.params.date;
+      const attendance = await storage.getAttendanceByUserAndDate(req.user!.id, date);
+      res.json(attendance);
+    } catch (error) {
+      console.error('Failed to fetch attendance record:', error);
+      res.status(500).json({ error: 'Failed to fetch attendance record' });
+    }
+  });
+
+  // Bulk create project time entries
+  app.post('/api/project-time-entries/bulk-create', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const timeEntries = req.body;
+      const results = [];
+      
+      for (const entryData of timeEntries) {
+        const timeEntry = await storage.createProjectTimeEntry(entryData);
+        results.push(timeEntry);
+      }
+      
+      res.status(201).json(results);
+    } catch (error) {
+      console.error('Failed to create project time entries:', error);
+      res.status(400).json({ error: 'Failed to create project time entries' });
+    }
+  });
+
+  // Bulk delete project time entries for a user and date
+  app.post('/api/project-time-entries/bulk-delete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { userId, date } = req.body;
+      
+      // Only allow users to delete their own entries or admin/hr to delete any
+      if (userId !== req.user!.id && !['admin', 'hr'].includes(req.user!.role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      await storage.deleteProjectTimeEntriesByUserAndDate(userId, date);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete project time entries:', error);
+      res.status(400).json({ error: 'Failed to delete project time entries' });
+    }
+  });
+
   return server;
 }
