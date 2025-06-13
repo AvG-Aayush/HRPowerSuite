@@ -89,14 +89,14 @@ export default function ProjectTimeTracker() {
   const [isEditing, setIsEditing] = useState(false);
 
   // Fetch user's project assignments
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<ProjectAssignment[]>({
+  const { data: projectAssignments = [], isLoading: assignmentsLoading } = useQuery<ProjectAssignment[]>({
     queryKey: ['/api/user/project-assignments'],
     enabled: !!user,
   });
 
-  // Filter assignments based on project date ranges and selected date
-  const getAvailableProjectsForDate = (assignments: ProjectAssignment[], selectedDate: Date) => {
-    return assignments.filter(assignment => {
+  // Filter project assignments based on project date ranges and selected date
+  const getAvailableProjectsForDate = (projectAssignments: ProjectAssignment[], selectedDate: Date) => {
+    return projectAssignments.filter(assignment => {
       // If project has no start date, consider it available from the beginning
       const projectStartDate = assignment.projectStartDate ? new Date(assignment.projectStartDate) : null;
       // If project has no end date, consider it available until now
@@ -110,8 +110,8 @@ export default function ProjectTimeTracker() {
     });
   };
 
-  // Get filtered assignments for the selected date
-  const availableAssignments = getAvailableProjectsForDate(assignments, selectedDate);
+  // Get filtered project assignments for the selected date
+  const availableProjects = getAvailableProjectsForDate(projectAssignments, selectedDate);
 
   // Fetch attendance record for selected date
   const { data: attendanceRecord, isLoading: attendanceLoading } = useQuery<AttendanceRecord>({
@@ -183,7 +183,7 @@ export default function ProjectTimeTracker() {
   });
 
   const addProjectAllocation = () => {
-    if (availableAssignments.length === 0) {
+    if (availableProjects.length === 0) {
       toast({ 
         title: "No projects available for this date",
         description: "Either you have no project assignments or no projects are active on the selected date",
@@ -192,11 +192,11 @@ export default function ProjectTimeTracker() {
       return;
     }
 
-    const availableProjects = availableAssignments.filter(
+    const unallocatedProjects = availableProjects.filter(
       assignment => !timeAllocations.some(alloc => alloc.projectId === assignment.projectId)
     );
 
-    if (availableProjects.length === 0) {
+    if (unallocatedProjects.length === 0) {
       toast({ 
         title: "All available projects for this date already allocated",
         variant: "destructive" 
@@ -204,7 +204,7 @@ export default function ProjectTimeTracker() {
       return;
     }
 
-    const firstAvailable = availableProjects[0];
+    const firstAvailable = unallocatedProjects[0];
     setTimeAllocations([...timeAllocations, {
       projectId: firstAvailable.projectId,
       projectName: firstAvailable.projectName,
@@ -218,7 +218,7 @@ export default function ProjectTimeTracker() {
   const updateAllocation = (index: number, field: keyof TimeAllocation, value: any) => {
     const updated = [...timeAllocations];
     if (field === 'projectId') {
-      const project = assignments.find(a => a.projectId === value);
+      const project = availableProjects.find(p => p.projectId === value);
       updated[index] = {
         ...updated[index],
         projectId: value,
@@ -463,15 +463,15 @@ export default function ProjectTimeTracker() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {availableAssignments.map((assignment) => (
+                                  {availableProjects.map((project) => (
                                     <SelectItem 
-                                      key={assignment.projectId} 
-                                      value={assignment.projectId.toString()}
+                                      key={project.projectId} 
+                                      value={project.projectId.toString()}
                                       disabled={timeAllocations.some((alloc, i) => 
-                                        i !== index && alloc.projectId === assignment.projectId
+                                        i !== index && alloc.projectId === project.projectId
                                       )}
                                     >
-                                      {assignment.projectName}
+                                      {project.projectName}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
