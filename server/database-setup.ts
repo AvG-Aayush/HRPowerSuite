@@ -33,6 +33,14 @@ export async function setupDatabase(): Promise<SetupResult> {
       console.log('Migration already applied or column does not exist');
     }
 
+    // Drop project_assignments table if it exists
+    try {
+      await db.execute(sql`DROP TABLE IF EXISTS project_assignments CASCADE`);
+      console.log('Dropped project_assignments table');
+    } catch (migrationError) {
+      console.log('project_assignments table already removed or does not exist');
+    }
+
     // Check if any users exist at all
     const allUsers = await db.select().from(users);
 
