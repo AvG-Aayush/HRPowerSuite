@@ -572,7 +572,7 @@ export default function ProjectTimeTracker() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </CardContent>
           </Card>
-        ) : dailyTimeEntries.length === 0 ? (
+        ) : (dailyTimeEntries as ProjectTimeEntry[]).length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Clock className="h-16 w-16 text-muted-foreground mb-4" />
@@ -580,7 +580,7 @@ export default function ProjectTimeTracker() {
               <p className="text-muted-foreground text-center mb-4">
                 You haven't logged any project time for this date yet.
               </p>
-              {assignments.length > 0 && !showAddForm && (
+              {(assignments as ProjectAssignment[]).length > 0 && !showAddForm && (
                 <Button onClick={() => setShowAddForm(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Your First Entry
@@ -590,7 +590,7 @@ export default function ProjectTimeTracker() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {dailyTimeEntries.map((entry: ProjectTimeEntry) => (
+            {(dailyTimeEntries as ProjectTimeEntry[]).map((entry: ProjectTimeEntry) => (
               <Card key={entry.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -644,7 +644,7 @@ export default function ProjectTimeTracker() {
         )}
       </div>
 
-      {assignments.length === 0 && (
+      {(assignments as ProjectAssignment[]).length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Clock className="h-16 w-16 text-muted-foreground mb-4" />
