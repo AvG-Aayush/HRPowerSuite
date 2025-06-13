@@ -1524,46 +1524,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Project Locations
-  app.get('/api/projects/:id/locations', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const projectId = parseInt(req.params.id);
-      const locations = await storage.getProjectLocations(projectId);
-      res.json(locations);
-    } catch (error) {
-      console.error('Failed to fetch project locations:', error);
-      res.status(500).json({ error: 'Failed to fetch project locations' });
-    }
-  });
 
-  app.post('/api/projects/:id/locations', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const projectId = parseInt(req.params.id);
-      const locationData = insertProjectLocationSchema.parse({
-        ...req.body,
-        projectId
-      });
-      
-      const location = await storage.addProjectLocation(locationData);
-      res.status(201).json(location);
-    } catch (error) {
-      console.error('Failed to add project location:', error);
-      res.status(400).json({ error: 'Failed to add project location' });
-    }
-  });
-
-  app.delete('/api/projects/:projectId/locations/:locationId', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const workLocationId = parseInt(req.params.locationId);
-      
-      await storage.removeProjectLocation(projectId, workLocationId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Failed to remove project location:', error);
-      res.status(400).json({ error: 'Failed to remove project location' });
-    }
-  });
 
   // Project Time Entries
   app.get('/api/project-time-entries', requireAuth, async (req: AuthenticatedRequest, res: Response) => {

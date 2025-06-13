@@ -204,10 +204,7 @@ export interface IStorage {
   removeUserFromProject(projectId: number, userId: number): Promise<void>;
   updateProjectAssignment(id: number, updates: Partial<ProjectAssignment>): Promise<ProjectAssignment>;
   
-  // Project locations
-  addProjectLocation(insertLocation: InsertProjectLocation): Promise<ProjectLocation>;
-  getProjectLocations(projectId: number): Promise<ProjectLocation[]>;
-  removeProjectLocation(projectId: number, workLocationId: number): Promise<void>;
+
   
   // Project time entries
   createProjectTimeEntry(insertTimeEntry: InsertProjectTimeEntry): Promise<ProjectTimeEntry>;
@@ -781,6 +778,7 @@ export class DatabaseStorage implements IStorage {
       priority: projects.priority,
       startDate: projects.startDate,
       endDate: projects.endDate,
+      locations: projects.locations,
       estimatedHours: projects.estimatedHours,
       actualHours: projects.actualHours,
       budget: projects.budget,
@@ -885,42 +883,7 @@ export class DatabaseStorage implements IStorage {
     return assignment;
   }
 
-  // Project locations
-  async addProjectLocation(insertLocation: InsertProjectLocation): Promise<ProjectLocation> {
-    const [location] = await db.insert(projectLocations).values(insertLocation).returning();
-    return location;
-  }
 
-  async getProjectLocations(projectId: number): Promise<ProjectLocation[]> {
-    return await db.select({
-      id: projectLocations.id,
-      projectId: projectLocations.projectId,
-      workLocationId: projectLocations.workLocationId,
-      isActive: projectLocations.isActive,
-      createdAt: projectLocations.createdAt,
-      locationName: workLocations.name,
-      locationAddress: workLocations.address,
-      latitude: workLocations.latitude,
-      longitude: workLocations.longitude,
-      radius: workLocations.radius
-    })
-    .from(projectLocations)
-    .innerJoin(workLocations, eq(projectLocations.workLocationId, workLocations.id))
-    .where(and(
-      eq(projectLocations.projectId, projectId),
-      eq(projectLocations.isActive, true)
-    ))
-    .orderBy(asc(workLocations.name));
-  }
-
-  async removeProjectLocation(projectId: number, workLocationId: number): Promise<void> {
-    await db.update(projectLocations)
-      .set({ isActive: false })
-      .where(and(
-        eq(projectLocations.projectId, projectId),
-        eq(projectLocations.workLocationId, workLocationId)
-      ));
-  }
 
   // Project time entries
   async createProjectTimeEntry(insertTimeEntry: InsertProjectTimeEntry): Promise<ProjectTimeEntry> {
