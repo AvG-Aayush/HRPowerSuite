@@ -343,11 +343,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markMessagesAsRead(userId: number, messageIds: number[]): Promise<void> {
+    if (messageIds.length === 0) return;
+    
     await db.update(messages)
       .set({ isRead: true })
       .where(and(
         eq(messages.recipientId, userId),
-        sql`${messages.id} = ANY(${messageIds})`
+        sql`${messages.id} = ANY(${sql.raw(`ARRAY[${messageIds.join(',')}]`)})`
       ));
   }
 
