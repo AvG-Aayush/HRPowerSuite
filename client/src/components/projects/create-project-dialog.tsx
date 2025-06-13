@@ -130,7 +130,7 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
           createdBy: user?.id,
         };
         console.log('Final project data:', projectData);
-        return apiRequest('/api/projects', 'POST', projectData);
+        return apiRequest('POST', '/api/projects', projectData);
       } catch (error) {
         console.error('Schema validation error:', error);
         throw error;
@@ -141,7 +141,7 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
       if (selectedEmployees.length > 0) {
         await Promise.all(
           selectedEmployees.map(userId =>
-            apiRequest(`/api/projects/${project.id}/assignments`, 'POST', {
+            apiRequest('POST', `/api/projects/${project.id}/assignments`, {
               userId,
               role: 'team_member',
               assignedBy: user?.id,

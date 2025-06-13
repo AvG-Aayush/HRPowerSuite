@@ -81,28 +81,25 @@ export function EnhancedAttendance({ userRole, currentUserId }: EnhancedAttendan
   // Today's attendance for current user
   const { data: todayAttendance } = useQuery({
     queryKey: ['/api/attendance/today', currentUserId],
-    queryFn: () => apiRequest('/api/attendance/today')
+    queryFn: () => apiRequest('GET', '/api/attendance/today')
   });
 
   // All employees attendance (admin only)
   const { data: employeesAttendance, refetch: refetchEmployeesAttendance } = useQuery<EmployeeAttendance[]>({
     queryKey: ['/api/admin/employees-attendance', format(selectedDate, 'yyyy-MM-dd')],
-    queryFn: () => apiRequest(`/api/admin/employees-attendance?date=${format(selectedDate, 'yyyy-MM-dd')}`),
+    queryFn: () => apiRequest('GET', `/api/admin/employees-attendance?date=${format(selectedDate, 'yyyy-MM-dd')}`),
     enabled: isAdmin
   });
 
   // Attendance report
   const { data: attendanceReport, refetch: refetchReport } = useQuery<AttendanceRecord[]>({
     queryKey: ['/api/admin/attendance/export', dateRange],
-    queryFn: () => apiRequest(`/api/admin/attendance/export?startDate=${dateRange.start}&endDate=${dateRange.end}`),
+    queryFn: () => apiRequest('GET', `/api/admin/attendance/export?startDate=${dateRange.start}&endDate=${dateRange.end}`),
     enabled: isAdmin && dateRange.start && dateRange.end
   });
 
   const checkInMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/attendance/checkin', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    mutationFn: (data: any) => apiRequest('POST', '/api/attendance/checkin', data),
     onSuccess: () => {
       toast({
         title: "Checked In Successfully",
