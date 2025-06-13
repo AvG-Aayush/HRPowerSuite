@@ -54,7 +54,6 @@ interface Project {
   priority: string;
   startDate: string;
   endDate: string;
-  estimatedHours: number;
   actualHours: number;
   budget: number;
   spentBudget: number;

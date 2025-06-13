@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface SetupResult {
@@ -23,6 +23,14 @@ export async function setupDatabase(): Promise<SetupResult> {
         success: false,
         message: 'Database connection failed. Please check DATABASE_URL environment variable.'
       };
+    }
+
+    // Run schema migrations
+    try {
+      await db.execute(sql`ALTER TABLE projects DROP COLUMN IF EXISTS estimated_hours`);
+      console.log('Removed estimated_hours column from projects table');
+    } catch (migrationError) {
+      console.log('Migration already applied or column does not exist');
     }
 
     // Check if any users exist at all
