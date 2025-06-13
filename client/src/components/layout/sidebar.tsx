@@ -21,7 +21,8 @@ import {
   Bell,
   CalendarDays,
   Navigation,
-  MapPin
+  MapPin,
+  FolderOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -105,6 +106,12 @@ export default function Layout({ children }: LayoutProps) {
     },
 
 
+    {
+      name: "Project Management",
+      href: "/project-management",
+      icon: FolderOpen,
+      current: location === "/project-management",
+    },
     {
       name: "Messages",
       href: "/messages",

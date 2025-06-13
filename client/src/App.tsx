@@ -38,6 +38,7 @@ import SimpleLoginPage from "@/pages/simple-login";
 import AddCalendarEvent from "@/pages/add-calendar-event";
 import AddShift from "@/pages/add-shift";
 import AddRoutine from "@/pages/add-routine";
+import ProjectManagement from "@/pages/project-management";
 import Layout from "@/components/layout/sidebar";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
@@ -225,6 +226,13 @@ function Router() {
         <ProtectedRoute component={() => (
           <Layout>
             <AdminRequests />
+          </Layout>
+        )} />
+      </Route>
+      <Route path="/project-management">
+        <ProtectedRoute component={() => (
+          <Layout>
+            <ProjectManagement />
           </Layout>
         )} />
       </Route>
