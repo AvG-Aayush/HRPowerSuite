@@ -1036,17 +1036,22 @@ export async function registerRoutes(app: Express) {
 
   app.post('/api/overtime-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      console.log('Overtime request data received:', req.body);
+      
       const overtimeData = {
         ...req.body,
         userId: req.user!.id,
-        requestedDate: new Date(req.body.date),
+        requestedDate: new Date(req.body.requestedDate || req.body.date),
         createdAt: new Date()
       };
+      
+      console.log('Processed overtime data:', overtimeData);
       
       const overtimeRequest = await storage.createOvertimeRequest(overtimeData);
       res.status(201).json(overtimeRequest);
     } catch (error) {
       console.error('Failed to create overtime request:', error);
+      console.error('Error details:', error);
       res.status(400).json({ error: 'Failed to create overtime request' });
     }
   });
