@@ -96,7 +96,7 @@ export function EnhancedAttendance({ userRole, currentUserId }: EnhancedAttendan
   });
 
   const checkInMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/attendance/checkin', data),
+    mutationFn: (data: any) => apiRequest('/api/attendance/checkin', 'POST', data),
     onSuccess: () => {
       toast({
         title: "Checked In Successfully",
@@ -116,7 +116,7 @@ export function EnhancedAttendance({ userRole, currentUserId }: EnhancedAttendan
 
   const checkOutMutation = useMutation({
     mutationFn: ({ attendanceId, notes }: { attendanceId: number; notes?: string }) => 
-      apiRequest('POST', `/api/attendance/checkout/${attendanceId}`, { notes }),
+      apiRequest(`/api/attendance/checkout/${attendanceId}`, 'POST', { notes }),
     onSuccess: () => {
       toast({
         title: "Checked Out Successfully",

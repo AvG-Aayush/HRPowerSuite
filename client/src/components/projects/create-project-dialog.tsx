@@ -109,7 +109,7 @@ export default function CreateProjectDialog({
         isActive: true,
       };
       
-      const response = await apiRequest('POST', '/api/projects', projectData);
+      const response = await apiRequest('/api/projects', 'POST', projectData);
       const project: any = await response.json();
       const projectId = project.id || project.insertId;
       
@@ -117,7 +117,7 @@ export default function CreateProjectDialog({
       if (data.assignedEmployees.length > 0 && projectId) {
         await Promise.all(
           data.assignedEmployees.map((userId: number) => 
-            apiRequest('POST', '/api/projects/' + projectId + '/assignments', {
+            apiRequest('/api/projects/' + projectId + '/assignments', 'POST', {
               projectId: projectId,
               userId,
               role: 'team_member',

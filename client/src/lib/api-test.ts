@@ -4,8 +4,8 @@ import { apiRequest } from "./queryClient";
 // Test the actual function signature
 export const testApiRequest = async () => {
   try {
-    // This should work with the correct signature: apiRequest(method, url, data)
-    const response = await apiRequest('GET', '/api/user');
+    // This should work with the correct signature: apiRequest(url, method, data)
+    const response = await apiRequest('/api/user', 'GET');
     console.log('apiRequest test successful with (method, url, data) signature');
     return true;
   } catch (error) {

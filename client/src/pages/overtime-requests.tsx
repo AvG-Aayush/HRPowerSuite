@@ -49,7 +49,7 @@ export default function OvertimeRequests() {
   const { data: overtimeRequests = [], isLoading } = useQuery({
     queryKey: ['/api/overtime-requests'],
     queryFn: async () => {
-      const res = await apiRequest('GET', '/api/overtime-requests');
+      const res = await apiRequest('/api/overtime-requests', 'GET');
       return await res.json();
     },
     enabled: !!user,
@@ -58,7 +58,7 @@ export default function OvertimeRequests() {
   // Create overtime request mutation
   const createMutation = useMutation({
     mutationFn: async (data: OvertimeRequestForm) => {
-      const res = await apiRequest('POST', '/api/overtime-requests', data);
+      const res = await apiRequest('/api/overtime-requests', 'POST', data);
       return await res.json();
     },
     onSuccess: () => {
