@@ -34,7 +34,10 @@ export function createAppConfig(): AppConfig {
   const databaseUrl = process.env.DATABASE_URL;
   
   if (!databaseUrl || databaseUrl.trim() === '') {
-    throw new Error("DATABASE_URL must be set with a valid Supabase connection string");
+    console.error("DATABASE_URL is missing or empty");
+    console.error("You need to set the DATABASE_URL environment variable with your PostgreSQL connection string");
+    console.error("Format: postgresql://username:password@host:port/database");
+    throw new Error("DATABASE_URL environment variable is required");
   }
   
   return {

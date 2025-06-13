@@ -4,22 +4,26 @@ import * as schema from "../shared/schema";
 import dotenv from "dotenv";
 dotenv.config()
 
-// Use Supabase database
+// Use PostgreSQL database
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl || databaseUrl.trim() === '') {
   console.error("DATABASE_URL is missing or empty");
-  console.error("You need to set the DATABASE_URL environment variable with your Supabase connection string");
-  console.error("Format: postgresql://postgres.[PROJECT_ID]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres");
+  console.error("You need to set the DATABASE_URL environment variable with your PostgreSQL connection string");
+  console.error("Format: postgresql://username:password@host:port/database");
   process.exit(1);
 }
 
-console.log("Connecting to Supabase database...");
+console.log("Connecting to PostgreSQL database...");
 
 const isSupabase = databaseUrl.includes('supabase.com');
-console.log(`Connecting to ${isSupabase ? 'Supabase' : 'PostgreSQL'} database...`);
+const isNeon = databaseUrl.includes('neon.tech');
+const isReplit = databaseUrl.includes('replit') || databaseUrl.includes('localhost');
+
+console.log(`Connecting to ${isSupabase ? 'Supabase' : isNeon ? 'Neon' : isReplit ? 'Replit PostgreSQL' : 'PostgreSQL'} database...`);
+
 export const pool = new Pool({ 
   connectionString: databaseUrl,
-  ssl: isSupabase ? { rejectUnauthorized: false } : (databaseUrl.includes('neon.tech') ? { rejectUnauthorized: false } : false)
+  ssl: (isSupabase || isNeon) ? { rejectUnauthorized: false } : false
 });
 export const db = drizzle(pool, { schema });
