@@ -128,7 +128,7 @@ export default function RequestForms() {
         startDate: new Date(data.startDate).toISOString(),
         endDate: new Date(data.endDate).toISOString(),
       };
-      return apiRequest('POST', '/api/leave-requests', requestData);
+      return apiRequest('/api/leave-requests', 'POST', requestData);
     },
     onSuccess: () => {
       toast({
