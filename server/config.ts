@@ -31,7 +31,7 @@ function getOptionalEnvVar(name: string, fallback: string): string {
 }
 
 export function createAppConfig(): AppConfig {
-  const databaseUrl = getRequiredEnvVar('SUPABASE_DATABASE_URL') || getRequiredEnvVar('DATABASE_URL');
+  const databaseUrl = getRequiredEnvVar('SUPABASE_DATABASE_URL');
   
   return {
     database: {
