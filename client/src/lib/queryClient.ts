@@ -62,7 +62,8 @@ export const queryClient = new QueryClient({
       retry: false,
     },
     mutations: {
-      retry: false,
+      retry: 2, // Retry failed mutations up to 2 times
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     },
   },
 });
