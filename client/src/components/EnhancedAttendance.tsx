@@ -80,21 +80,18 @@ export function EnhancedAttendance({ userRole, currentUserId }: EnhancedAttendan
 
   // Today's attendance for current user
   const { data: todayAttendance } = useQuery({
-    queryKey: ['/api/attendance/today', currentUserId],
-    queryFn: () => apiRequest('GET', '/api/attendance/today')
+    queryKey: ['/api/attendance/today', currentUserId]
   });
 
   // All employees attendance (admin only)
   const { data: employeesAttendance, refetch: refetchEmployeesAttendance } = useQuery<EmployeeAttendance[]>({
-    queryKey: ['/api/admin/employees-attendance', format(selectedDate, 'yyyy-MM-dd')],
-    queryFn: () => apiRequest('GET', `/api/admin/employees-attendance?date=${format(selectedDate, 'yyyy-MM-dd')}`),
+    queryKey: [`/api/admin/employees-attendance?date=${format(selectedDate, 'yyyy-MM-dd')}`],
     enabled: isAdmin
   });
 
   // Attendance report
   const { data: attendanceReport, refetch: refetchReport } = useQuery<AttendanceRecord[]>({
-    queryKey: ['/api/admin/attendance/export', dateRange],
-    queryFn: () => apiRequest('GET', `/api/admin/attendance/export?startDate=${dateRange.start}&endDate=${dateRange.end}`),
+    queryKey: [`/api/admin/attendance/export?startDate=${dateRange.start}&endDate=${dateRange.end}`],
     enabled: isAdmin && dateRange.start && dateRange.end
   });
 
@@ -119,10 +116,7 @@ export function EnhancedAttendance({ userRole, currentUserId }: EnhancedAttendan
 
   const checkOutMutation = useMutation({
     mutationFn: ({ attendanceId, notes }: { attendanceId: number; notes?: string }) => 
-      apiRequest(`/api/attendance/checkout/${attendanceId}`, {
-        method: 'POST',
-        body: JSON.stringify({ notes })
-      }),
+      apiRequest('POST', `/api/attendance/checkout/${attendanceId}`, { notes }),
     onSuccess: () => {
       toast({
         title: "Checked Out Successfully",
