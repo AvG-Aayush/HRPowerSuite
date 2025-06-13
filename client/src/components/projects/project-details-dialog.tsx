@@ -146,10 +146,10 @@ export default function ProjectDetailsDialog({
   const handleSave = () => {
     const updates = {
       ...editForm,
-      startDate: editForm.startDate ? new Date(editForm.startDate).toISOString() : null,
-      endDate: editForm.endDate ? new Date(editForm.endDate).toISOString() : null,
-      estimatedHours: Number(editForm.estimatedHours),
-      budget: Number(editForm.budget),
+      startDate: editForm.startDate && editForm.startDate.trim() !== '' ? new Date(editForm.startDate).toISOString() : null,
+      endDate: editForm.endDate && editForm.endDate.trim() !== '' ? new Date(editForm.endDate).toISOString() : null,
+      estimatedHours: Number(editForm.estimatedHours) || 0,
+      budget: Number(editForm.budget) || 0,
     };
     updateProjectMutation.mutate(updates);
   };
