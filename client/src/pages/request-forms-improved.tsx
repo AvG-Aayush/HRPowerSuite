@@ -161,7 +161,7 @@ export default function RequestForms() {
         isToilRequest: true,
         toilHoursUsed: data.toilHoursUsed,
       };
-      return apiRequest('POST', '/api/leave-requests', requestData);
+      return apiRequest('/api/leave-requests', 'POST', requestData);
     },
     onSuccess: () => {
       toast({
@@ -187,7 +187,7 @@ export default function RequestForms() {
         ...data,
         requestedDate: new Date(data.requestedDate).toISOString(),
       };
-      return apiRequest('POST', '/api/overtime-requests', requestData);
+      return apiRequest('/api/overtime-requests', 'POST', requestData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/overtime-requests'] });

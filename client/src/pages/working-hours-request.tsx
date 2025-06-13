@@ -87,7 +87,7 @@ export default function WorkingHoursRequest() {
         ...data,
         requestedDate: new Date(data.requestedDate).toISOString(),
       };
-      return apiRequest('POST', '/api/overtime-requests', requestData);
+      return apiRequest('/api/overtime-requests', 'POST', requestData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/overtime-requests'] });
