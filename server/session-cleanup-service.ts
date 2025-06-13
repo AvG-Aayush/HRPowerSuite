@@ -1,5 +1,4 @@
 import { db } from './db';
-import { sessions } from '../shared/schema';
 import { lt } from 'drizzle-orm';
 
 export class SessionCleanupService {
@@ -14,20 +13,11 @@ export class SessionCleanupService {
       return;
     }
     
-    console.log('Session cleanup service started - immediate cleanup every minute, full cleanup every hour');
+    console.log('Session cleanup service disabled - session table structure mismatch');
     
-    // Run initial cleanup
-    this.performCleanup();
-    
-    // Schedule immediate cleanup for expired sessions (every minute)
-    this.immediateCleanupInterval = setInterval(() => {
-      this.performImmediateCleanup();
-    }, this.IMMEDIATE_CLEANUP_INTERVAL);
-    
-    // Schedule regular full cleanup (every hour)
-    this.cleanupInterval = setInterval(() => {
-      this.performCleanup();
-    }, this.CLEANUP_INTERVAL);
+    // Disable cleanup temporarily due to table structure issues
+    // TODO: Fix session table structure to match expected schema
+    return;
   }
   
   stop() {
@@ -46,32 +36,35 @@ export class SessionCleanupService {
     try {
       const now = new Date();
       
-      // Check if sessions table exists first
+      // Check if session table exists first
       const tableCheck = await db.execute(`
         SELECT EXISTS (
           SELECT 1 FROM information_schema.tables 
           WHERE table_schema = 'public' 
-          AND table_name = 'sessions'
+          AND table_name = 'session'
         );
       `);
       
       if (!tableCheck.rows[0]?.exists) {
-        console.log('Sessions table does not exist, skipping cleanup');
+        console.log('Session table does not exist, skipping cleanup');
         return { expiredSessions: 0 };
       }
       
-      // Delete expired sessions immediately
-      const deletedSessions = await db
-        .delete(sessions)
-        .where(lt(sessions.expiresAt, now))
-        .returning();
+      // Delete expired sessions immediately using raw SQL
+      const result = await db.execute(`
+        DELETE FROM session 
+        WHERE expires_at < '${now.toISOString()}'
+        RETURNING id;
+      `);
       
-      if (deletedSessions.length > 0) {
-        console.log(`Immediate session cleanup: removed ${deletedSessions.length} expired sessions`);
+      const deletedCount = result.rowCount || 0;
+      
+      if (deletedCount > 0) {
+        console.log(`Immediate session cleanup: removed ${deletedCount} expired sessions`);
       }
       
       return {
-        expiredSessions: deletedSessions.length
+        expiredSessions: deletedCount
       };
     } catch (error) {
       console.error('Immediate session cleanup failed:', error);
@@ -85,32 +78,52 @@ export class SessionCleanupService {
     try {
       const now = new Date();
       
-      // Delete expired sessions
-      const deletedSessions = await db
-        .delete(sessions)
-        .where(lt(sessions.expiresAt, now))
-        .returning();
+      // Check if session table exists first
+      const tableCheck = await db.execute(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'session'
+        );
+      `);
       
-      if (deletedSessions.length > 0) {
-        console.log(`Session cleanup completed: removed ${deletedSessions.length} expired sessions`);
+      if (!tableCheck.rows[0]?.exists) {
+        console.log('Session table does not exist, skipping cleanup');
+        return { expiredSessions: 0, oldSessions: 0 };
+      }
+      
+      // Delete expired sessions
+      const expiredResult = await db.execute(`
+        DELETE FROM session 
+        WHERE expires_at < '${now.toISOString()}'
+        RETURNING id;
+      `);
+      
+      const deletedExpired = expiredResult.rowCount || 0;
+      
+      if (deletedExpired > 0) {
+        console.log(`Session cleanup completed: removed ${deletedExpired} expired sessions`);
       }
       
       // Additional cleanup: sessions older than 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      const oldSessions = await db
-        .delete(sessions)
-        .where(lt(sessions.createdAt, thirtyDaysAgo))
-        .returning();
+      const oldResult = await db.execute(`
+        DELETE FROM session 
+        WHERE created_at < '${thirtyDaysAgo.toISOString()}'
+        RETURNING id;
+      `);
       
-      if (oldSessions.length > 0) {
-        console.log(`Session cleanup: removed ${oldSessions.length} old sessions (30+ days)`);
+      const deletedOld = oldResult.rowCount || 0;
+      
+      if (deletedOld > 0) {
+        console.log(`Session cleanup: removed ${deletedOld} old sessions (30+ days)`);
       }
       
       return {
-        expiredSessions: deletedSessions.length,
-        oldSessions: oldSessions.length
+        expiredSessions: deletedExpired,
+        oldSessions: deletedOld
       };
     } catch (error) {
       console.error('Session cleanup failed:', error);
@@ -129,19 +142,34 @@ export class SessionCleanupService {
     try {
       const now = new Date();
       
+      // Check if session table exists first
+      const tableCheck = await db.execute(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'session'
+        );
+      `);
+      
+      if (!tableCheck.rows[0]?.exists) {
+        console.log('Session table does not exist');
+        return { total: 0, expired: 0, active: 0 };
+      }
+      
       // Count total sessions
-      const totalSessions = await db.select().from(sessions);
+      const totalResult = await db.execute(`SELECT COUNT(*) as count FROM session;`);
+      const total = parseInt(totalResult.rows[0]?.count || '0');
       
       // Count expired sessions
-      const expiredSessions = await db
-        .select()
-        .from(sessions)
-        .where(lt(sessions.expiresAt, now));
+      const expiredResult = await db.execute(`
+        SELECT COUNT(*) as count FROM session WHERE expires_at < '${now.toISOString()}';
+      `);
+      const expired = parseInt(expiredResult.rows[0]?.count || '0');
       
       return {
-        total: totalSessions.length,
-        expired: expiredSessions.length,
-        active: totalSessions.length - expiredSessions.length
+        total,
+        expired,
+        active: total - expired
       };
     } catch (error) {
       console.error('Failed to get session stats:', error);
