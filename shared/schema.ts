@@ -40,6 +40,18 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Session management for automatic cleanup of expired sessions
+export const sessions = pgTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  data: jsonb("data").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+});
+
 // High-tech attendance tracking with GPS and manual check-in/out
 export const attendance = pgTable("attendance", {
   id: serial("id").primaryKey(),

@@ -4,8 +4,8 @@ import * as schema from "../shared/schema";
 import dotenv from "dotenv";
 dotenv.config()
 
-// Use PostgreSQL database
-const databaseUrl = process.env.DATABASE_URL;
+// Use PostgreSQL database - prioritize Supabase
+const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
 
 if (!databaseUrl || databaseUrl.trim() === '') {
   console.error("DATABASE_URL is missing or empty");
@@ -27,6 +27,8 @@ if (isSupabase) {
 } else {
   console.log('Connecting to PostgreSQL database...');
 }
+
+console.log(`Using database: ${isSupabase ? 'Supabase' : isNeon ? 'Neon' : isReplit ? 'Replit' : 'PostgreSQL'}`);
 
 export const pool = new Pool({ 
   connectionString: databaseUrl,
