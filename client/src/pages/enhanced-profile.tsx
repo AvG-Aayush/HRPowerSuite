@@ -185,10 +185,7 @@ export default function EnhancedProfile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      return apiRequest(`/api/profile/${user?.id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
+      return apiRequest(`/api/profile`, "PUT", data);
     },
     onSuccess: () => {
       toast({

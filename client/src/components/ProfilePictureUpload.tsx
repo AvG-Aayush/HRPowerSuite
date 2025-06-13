@@ -25,8 +25,7 @@ export function ProfilePictureUpload({ currentImage, userId, onSuccess }: Profil
 
   const updateProfilePictureMutation = useMutation({
     mutationFn: async (profilePicture: string) => {
-      const response = await apiRequest("PUT", "/api/profile/picture", { profilePicture });
-      return response.json();
+      return apiRequest("/api/profile/picture", "PUT", { profilePicture });
     },
     onSuccess: (data: any) => {
       toast({

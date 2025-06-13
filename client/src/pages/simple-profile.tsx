@@ -60,8 +60,7 @@ export default function SimpleProfile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: BasicProfileFormData) => {
-      const response = await apiRequest("PUT", `/api/profile`, data);
-      return response.json();
+      return apiRequest(`/api/profile`, "PUT", data);
     },
     onSuccess: () => {
       toast({
