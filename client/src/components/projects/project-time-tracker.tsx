@@ -88,6 +88,12 @@ export default function ProjectTimeTracker() {
   const [timeAllocations, setTimeAllocations] = useState<TimeAllocation[]>([]);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Fetch user's project assignments
+  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<ProjectAssignment[]>({
+    queryKey: ['/api/user/project-assignments'],
+    enabled: !!user,
+  });
+
   // Filter assignments based on project date ranges and selected date
   const getAvailableProjectsForDate = (assignments: ProjectAssignment[], selectedDate: Date) => {
     return assignments.filter(assignment => {
@@ -106,12 +112,6 @@ export default function ProjectTimeTracker() {
 
   // Get filtered assignments for the selected date
   const availableAssignments = getAvailableProjectsForDate(assignments, selectedDate);
-
-  // Fetch user's project assignments
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<ProjectAssignment[]>({
-    queryKey: ['/api/user/project-assignments'],
-    enabled: !!user,
-  });
 
   // Fetch attendance record for selected date
   const { data: attendanceRecord, isLoading: attendanceLoading } = useQuery<AttendanceRecord>({
@@ -183,22 +183,22 @@ export default function ProjectTimeTracker() {
   });
 
   const addProjectAllocation = () => {
-    if (assignments.length === 0) {
+    if (availableAssignments.length === 0) {
       toast({ 
-        title: "No projects assigned",
-        description: "You need to be assigned to projects before tracking time",
+        title: "No projects available for this date",
+        description: "Either you have no project assignments or no projects are active on the selected date",
         variant: "destructive" 
       });
       return;
     }
 
-    const availableProjects = assignments.filter(
+    const availableProjects = availableAssignments.filter(
       assignment => !timeAllocations.some(alloc => alloc.projectId === assignment.projectId)
     );
 
     if (availableProjects.length === 0) {
       toast({ 
-        title: "All assigned projects already allocated",
+        title: "All available projects for this date already allocated",
         variant: "destructive" 
       });
       return;
