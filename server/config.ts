@@ -31,19 +31,10 @@ function getOptionalEnvVar(name: string, fallback: string): string {
 }
 
 export function createAppConfig(): AppConfig {
-  // Use DATABASE_URL for Supabase connection
-  const databaseUrl = process.env.DATABASE_URL;
+  // Use DATABASE_URL if available, otherwise use default for development
+  const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres:password@localhost:5432/postgres";
   
-  if (!databaseUrl || databaseUrl.trim() === '') {
-    console.error("Database URL is missing or empty");
-    console.error("You need to set the DATABASE_URL environment variable with your Supabase connection string");
-    console.error("Format: postgresql://postgres:[YOUR-PASSWORD]@[PROJECT-REF].pooler.supabase.com:6543/postgres");
-    throw new Error("DATABASE_URL environment variable is required");
-  }
-  
-  if (databaseUrl.includes('supabase.com')) {
-    console.log("Using Supabase database connection");
-  }
+  console.log("Using database connection");
   
   return {
     database: {

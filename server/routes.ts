@@ -359,13 +359,54 @@ export async function registerRoutes(app: Express) {
   app.get('/api/attendance/history/:userId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = parseInt(req.params.userId);
+      const { startDate, endDate } = req.query;
       
       // Users can only view their own attendance unless admin/hr
       if (req.user!.id !== userId && !['admin', 'hr'].includes(req.user!.role)) {
         return res.status(403).json({ error: 'Forbidden' });
       }
 
-      const attendance = await storage.getAttendanceByUser(userId);
+      let attendance = await storage.getAttendanceByUser(userId);
+      
+      // Filter by date range if provided
+      if (startDate && endDate) {
+        const start = new Date(startDate as string);
+        const end = new Date(endDate as string);
+        attendance = attendance.filter(record => {
+          const recordDate = new Date(record.date);
+          return recordDate >= start && recordDate <= end;
+        });
+      }
+      
+      res.json(attendance);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch attendance history' });
+    }
+  });
+
+  // Enhanced attendance history with date range support
+  app.get('/api/attendance/history', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { userId, startDate, endDate } = req.query;
+      const targetUserId = userId ? parseInt(userId as string) : req.user!.id;
+      
+      // Users can only view their own attendance unless admin/hr
+      if (req.user!.id !== targetUserId && !['admin', 'hr'].includes(req.user!.role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      let attendance = await storage.getAttendanceByUser(targetUserId);
+      
+      // Filter by date range if provided
+      if (startDate && endDate) {
+        const start = new Date(startDate as string);
+        const end = new Date(endDate as string);
+        attendance = attendance.filter(record => {
+          const recordDate = new Date(record.date);
+          return recordDate >= start && recordDate <= end;
+        });
+      }
+      
       res.json(attendance);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch attendance history' });
@@ -1540,10 +1581,33 @@ export async function registerRoutes(app: Express) {
   // Project Time Entries
   app.get('/api/project-time-entries', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { date } = req.query;
-      const queryDate = date ? new Date(date as string) : undefined;
+      const { date, userId, startDate, endDate } = req.query;
+      const targetUserId = userId ? parseInt(userId as string) : req.user!.id;
       
-      const timeEntries = await storage.getUserProjectTimeEntries(req.user!.id, queryDate);
+      // Users can only view their own time entries unless admin/hr
+      if (req.user!.id !== targetUserId && !['admin', 'hr'].includes(req.user!.role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      let timeEntries;
+      
+      if (startDate && endDate) {
+        // Fetch time entries within date range - filter by date after getting all entries
+        const allEntries = await storage.getUserProjectTimeEntries(targetUserId);
+        const start = new Date(startDate as string);
+        const end = new Date(endDate as string);
+        timeEntries = allEntries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          return entryDate >= start && entryDate <= end;
+        });
+      } else if (date) {
+        // Fetch time entries for specific date
+        timeEntries = await storage.getUserProjectTimeEntries(targetUserId, new Date(date as string));
+      } else {
+        // Fetch all user's time entries
+        timeEntries = await storage.getUserProjectTimeEntries(targetUserId);
+      }
+      
       res.json(timeEntries);
     } catch (error) {
       console.error('Failed to fetch project time entries:', error);
