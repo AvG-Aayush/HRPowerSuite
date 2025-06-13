@@ -503,6 +503,14 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ error: 'Either recipientId or groupId is required' });
       }
 
+      // Validate recipient exists if sending direct message
+      if (req.body.recipientId) {
+        const recipient = await storage.getUser(parseInt(req.body.recipientId));
+        if (!recipient) {
+          return res.status(404).json({ error: 'Recipient not found' });
+        }
+      }
+
       const messageData = insertMessageSchema.parse({
         ...req.body,
         senderId: req.user!.id,
