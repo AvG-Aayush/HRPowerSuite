@@ -908,8 +908,7 @@ export async function registerRoutes(app: Express) {
       const leaveRequest = await storage.updateLeaveRequest(id, {
         status: 'approved',
         approvedBy: req.user!.id,
-        approvalNotes: approvalNotes || null,
-        processedAt: new Date()
+        reviewedAt: new Date()
       });
       
       res.json(leaveRequest);
@@ -928,7 +927,7 @@ export async function registerRoutes(app: Express) {
         status: 'rejected',
         approvedBy: req.user!.id,
         rejectionReason,
-        processedAt: new Date()
+        reviewedAt: new Date()
       });
       
       res.json(leaveRequest);
@@ -989,6 +988,69 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error('Failed to approve timeoff request:', error);
       res.status(400).json({ error: 'Failed to approve timeoff request' });
+    }
+  });
+
+  // Overtime request management routes
+  app.get('/api/overtime-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userRole = req.user!.role;
+      let overtimeRequests;
+      
+      if (userRole === 'admin' || userRole === 'hr') {
+        // Admin and HR can see all requests
+        overtimeRequests = await storage.getOvertimeRequests();
+      } else {
+        // Regular users see only their own requests
+        const allRequests = await storage.getOvertimeRequests();
+        overtimeRequests = allRequests.filter((request: any) => request.userId === req.user!.id);
+      }
+      
+      res.json(overtimeRequests);
+    } catch (error) {
+      console.error('Failed to fetch overtime requests:', error);
+      res.status(500).json({ error: 'Failed to fetch overtime requests' });
+    }
+  });
+
+  app.post('/api/overtime-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const overtimeData = {
+        ...req.body,
+        userId: req.user!.id,
+        requestedDate: new Date(req.body.date),
+        createdAt: new Date()
+      };
+      
+      const overtimeRequest = await storage.createOvertimeRequest(overtimeData);
+      res.status(201).json(overtimeRequest);
+    } catch (error) {
+      console.error('Failed to create overtime request:', error);
+      res.status(400).json({ error: 'Failed to create overtime request' });
+    }
+  });
+
+  app.put('/api/overtime-requests/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      // Check if user has permission to update
+      const userRole = req.user!.role;
+      if (userRole !== 'admin' && userRole !== 'hr') {
+        return res.status(403).json({ error: 'Insufficient permissions to update overtime requests' });
+      }
+      
+      const overtimeRequest = await storage.updateOvertimeRequest(id, {
+        status,
+        approvedBy: req.user!.id,
+        processedAt: new Date()
+      });
+      
+      res.json(overtimeRequest);
+    } catch (error) {
+      console.error('Failed to update overtime request:', error);
+      res.status(400).json({ error: 'Failed to update overtime request' });
     }
   });
 
