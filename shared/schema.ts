@@ -424,7 +424,7 @@ export const routines = pgTable("routines", {
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  description: text("description"),
+  description: text("description").notNull(),
   status: text("status").notNull().default("planning"), // planning, active, on_hold, completed, cancelled
   priority: text("priority").notNull().default("medium"), // low, medium, high, critical
   startDate: timestamp("start_date"),
