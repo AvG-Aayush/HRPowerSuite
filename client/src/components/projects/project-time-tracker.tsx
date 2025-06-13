@@ -359,31 +359,69 @@ export default function ProjectTimeTracker() {
         </Card>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar and Project Distribution */}
       {totalWorkingHours > 0 && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Project Time Allocation</span>
-                <span>{totalLoggedHours.toFixed(1)}h / {totalWorkingHours.toFixed(1)}h</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Project Time Allocation</span>
+                  <span>{totalLoggedHours.toFixed(1)}h / {totalWorkingHours.toFixed(1)}h</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, (totalLoggedHours / totalWorkingHours) * 100)}%`
+                    }}
+                  />
+                </div>
+                {totalLoggedHours > totalWorkingHours && (
+                  <p className="text-sm text-red-600">
+                    Warning: Logged hours exceed total working hours
+                  </p>
+                )}
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.min(100, (totalLoggedHours / totalWorkingHours) * 100)}%`
-                  }}
-                />
-              </div>
-              {totalLoggedHours > totalWorkingHours && (
-                <p className="text-sm text-red-600">
-                  Warning: Logged hours exceed total working hours
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Project Distribution Helper */}
+          {remainingHours > 0 && assignments.length > 1 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Quick Allocation</CardTitle>
+                <CardDescription className="text-xs">
+                  Distribute {remainingHours.toFixed(1)}h across your projects
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {assignments.slice(0, 3).map((assignment: ProjectAssignment) => {
+                    const suggestedHours = Math.round((remainingHours / assignments.length) * 10) / 10;
+                    return (
+                      <div key={assignment.projectId} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{assignment.projectName}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => {
+                            form.setValue('projectId', assignment.projectId);
+                            form.setValue('hoursSpent', suggestedHours);
+                            setShowAddForm(true);
+                          }}
+                        >
+                          +{suggestedHours}h
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Add Time Entry Form */}
@@ -468,13 +506,16 @@ export default function ProjectTimeTracker() {
                           <Input
                             type="number"
                             min="0.1"
-                            max="24"
+                            max={Math.max(0.1, remainingHours)}
                             step="0.1"
                             placeholder="0.0"
                             {...field}
                             onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
                           />
                         </FormControl>
+                        <p className="text-sm text-muted-foreground">
+                          Available: {remainingHours.toFixed(1)}h from today's work
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}

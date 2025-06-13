@@ -161,7 +161,7 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
     },
   });
 
-  const onSubmit = (data: CreateProjectData) => {
+  const onSubmit = (data: CreateProjectFormData) => {
     createProjectMutation.mutate(data);
   };
 
@@ -395,7 +395,9 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
                   <FormControl>
                     <Input
                       placeholder="Enter locations separated by commas (e.g., New York, London, Tokyo)"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
                     />
                   </FormControl>
                   <p className="text-sm text-muted-foreground">
