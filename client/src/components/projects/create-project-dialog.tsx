@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { insertProjectSchema, type InsertProject } from "@/shared/schema";
+import { insertProjectSchema, type InsertProject } from "../../../shared/schema";
 import {
   Dialog,
   DialogContent,
