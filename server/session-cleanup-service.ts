@@ -46,6 +46,20 @@ export class SessionCleanupService {
     try {
       const now = new Date();
       
+      // Check if sessions table exists first
+      const tableCheck = await db.execute(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'sessions'
+        );
+      `);
+      
+      if (!tableCheck.rows[0]?.exists) {
+        console.log('Sessions table does not exist, skipping cleanup');
+        return { expiredSessions: 0 };
+      }
+      
       // Delete expired sessions immediately
       const deletedSessions = await db
         .delete(sessions)
