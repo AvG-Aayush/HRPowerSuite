@@ -438,7 +438,8 @@ export async function registerRoutes(app: Express) {
       const message = await storage.createMessage(messageData);
       res.status(201).json(message);
     } catch (error) {
-      res.status(400).json({ error: 'Failed to send message' });
+      console.error('Message creation error:', error);
+      res.status(400).json({ error: 'Failed to send message', details: error.message });
     }
   });
 
