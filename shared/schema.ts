@@ -174,13 +174,23 @@ export const shifts = pgTable("shifts", {
 // Encrypted chat messages
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  senderId: integer("senderId").notNull().references(() => users.id),
-  recipientId: integer("recipientId").references(() => users.id), // null for group messages
-  groupId: integer("groupId"), // for group chats
-  content: text("content").notNull(), // encrypted content
-  messageType: text("messageType").notNull().default("text"), // text, file, image
-  isRead: boolean("isRead").notNull().default(false),
-  sentAt: timestamp("sentAt").notNull().defaultNow(),
+  senderId: integer("sender_id").notNull().references(() => users.id),
+  recipientId: integer("recipient_id").references(() => users.id), // null for group messages
+  groupId: integer("group_id"), // for group chats
+  content: text("content").notNull(),
+  messageType: text("message_type").notNull().default("text"), // text, file, image
+  isRead: boolean("is_read").notNull().default(false),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+  deletedAt: timestamp("deleted_at"),
+  editedAt: timestamp("edited_at"),
+  originalContent: text("original_content"), // for edit history
+  attachmentUrl: text("attachment_url"),
+  attachmentType: text("attachment_type"), // image, file, audio, video
+  priority: text("priority").notNull().default("normal"), // low, normal, high, urgent
+  deliveryStatus: text("delivery_status").notNull().default("sent"), // sent, delivered, read, failed
+  retryCount: integer("retry_count").notNull().default(0),
+  lastRetryAt: timestamp("last_retry_at"),
 });
 
 // Chat groups
@@ -199,6 +209,21 @@ export const groupMemberships = pgTable("group_memberships", {
   userId: integer("user_id").notNull().references(() => users.id),
   role: text("role").notNull().default("member"), // admin, member
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  leftAt: timestamp("left_at"),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+// Message delivery tracking and failures
+export const messageDeliveryLog = pgTable("message_delivery_log", {
+  id: serial("id").primaryKey(),
+  messageId: integer("message_id").notNull().references(() => messages.id),
+  recipientId: integer("recipient_id").notNull().references(() => users.id),
+  deliveryStatus: text("delivery_status").notNull(), // pending, delivered, failed, read
+  errorMessage: text("error_message"),
+  attemptCount: integer("attempt_count").notNull().default(1),
+  lastAttemptAt: timestamp("last_attempt_at").notNull().defaultNow(),
+  deliveredAt: timestamp("delivered_at"),
+  readAt: timestamp("read_at"),
 });
 
 // AI insights and summaries
@@ -500,6 +525,17 @@ export const groupMembershipsRelations = relations(groupMemberships, ({ one }) =
   }),
 }));
 
+export const messageDeliveryLogRelations = relations(messageDeliveryLog, ({ one }) => ({
+  message: one(messages, {
+    fields: [messageDeliveryLog.messageId],
+    references: [messages.id],
+  }),
+  recipient: one(users, {
+    fields: [messageDeliveryLog.recipientId],
+    references: [users.id],
+  }),
+}));
+
 export const aiInsightsRelations = relations(aiInsights, ({ one }) => ({
   generatedBy: one(users, {
     fields: [aiInsights.generatedBy],
@@ -652,6 +688,18 @@ export const insertShiftSchema = createInsertSchema(shifts).omit({
 export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   sentAt: true,
+  isDeleted: true,
+  deletedAt: true,
+  editedAt: true,
+  retryCount: true,
+  lastRetryAt: true,
+});
+
+export const insertMessageDeliveryLogSchema = createInsertSchema(messageDeliveryLog).omit({
+  id: true,
+  lastAttemptAt: true,
+  deliveredAt: true,
+  readAt: true,
 });
 
 export const insertChatGroupSchema = createInsertSchema(chatGroups).omit({
@@ -798,24 +846,40 @@ export const updateProfilePictureSchema = z.object({
   profilePicture: z.string().min(1, "Profile picture is required"),
 });
 
-// Types
+// Message schema for API
+export const messageSchema = z.object({
+  recipientId: z.string().min(1, "Recipient is required").transform(val => parseInt(val)),
+  groupId: z.number().optional(),
+  content: z.string().min(1, "Message content is required"),
+  messageType: z.enum(["text", "file", "image", "audio", "video"]).default("text"),
+  priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+  attachmentUrl: z.string().optional(),
+  attachmentType: z.string().optional(),
+});
+
+// Core message types
+export type User = typeof users.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+export type MessageDeliveryLog = typeof messageDeliveryLog.$inferSelect;
+export type ChatGroup = typeof chatGroups.$inferSelect;
+export type GroupMembership = typeof groupMemberships.$inferSelect;
+
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type InsertMessageDeliveryLog = z.infer<typeof insertMessageDeliveryLogSchema>;
+export type MessageFormData = z.infer<typeof messageSchema>;
+
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type UpdateProfilePictureData = z.infer<typeof updateProfilePictureSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type Attendance = typeof attendance.$inferSelect;
 export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
 export type InsertShift = z.infer<typeof insertShiftSchema>;
 export type Shift = typeof shifts.$inferSelect;
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type Message = typeof messages.$inferSelect;
 export type InsertChatGroup = z.infer<typeof insertChatGroupSchema>;
-export type ChatGroup = typeof chatGroups.$inferSelect;
 export type InsertGroupMembership = z.infer<typeof insertGroupMembershipSchema>;
-export type GroupMembership = typeof groupMemberships.$inferSelect;
 export type InsertAiInsight = z.infer<typeof insertAiInsightSchema>;
 export type AiInsight = typeof aiInsights.$inferSelect;
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
