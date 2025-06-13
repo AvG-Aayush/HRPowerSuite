@@ -58,11 +58,12 @@ export default function ChatPage() {
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { recipientId?: number; groupId?: number; content: string }) => {
       const encryptedContent = encryptMessage(messageData.content);
-      return apiRequest('POST', '/api/messages', {
+      const response = await apiRequest('POST', '/api/messages', {
         ...messageData,
         content: encryptedContent,
         messageType: 'text',
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -72,11 +73,18 @@ export default function ChatPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/messages/unread-count'] });
       setMessage("");
-    },
-    onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to send message",
+        title: "Message Sent",
+        description: "Your message has been delivered successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Message sending error:', error);
+      const errorMessage = error.response?.data?.error || error.message || "Unable to send message. It will be retried automatically.";
+      
+      toast({
+        title: "Message Failed",
+        description: errorMessage,
         variant: "destructive",
       });
     },

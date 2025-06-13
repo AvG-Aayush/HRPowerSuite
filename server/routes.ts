@@ -534,6 +534,7 @@ export async function registerRoutes(app: Express) {
           });
         } catch (logError) {
           console.error('Failed to create delivery log:', logError);
+          // Don't fail the message send if logging fails
         }
       }
       

@@ -57,9 +57,12 @@ export default function ChatWindow() {
       });
     },
     onError: (error: any) => {
+      console.error('Message sending error:', error);
+      const errorMessage = error.response?.data?.error || error.message || "Unable to send message. It will be retried automatically.";
+      
       toast({
         title: "Message Failed",
-        description: error.response?.data?.error || "Failed to send message",
+        description: errorMessage,
         variant: "destructive",
       });
     },

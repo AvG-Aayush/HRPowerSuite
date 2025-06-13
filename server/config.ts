@@ -31,13 +31,18 @@ function getOptionalEnvVar(name: string, fallback: string): string {
 }
 
 export function createAppConfig(): AppConfig {
-  const databaseUrl = process.env.DATABASE_URL;
+  // Prioritize Supabase database URL if provided
+  const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
   
   if (!databaseUrl || databaseUrl.trim() === '') {
-    console.error("DATABASE_URL is missing or empty");
-    console.error("You need to set the DATABASE_URL environment variable with your PostgreSQL connection string");
+    console.error("Database URL is missing or empty");
+    console.error("You need to set either SUPABASE_DATABASE_URL or DATABASE_URL environment variable");
     console.error("Format: postgresql://username:password@host:port/database");
-    throw new Error("DATABASE_URL environment variable is required");
+    throw new Error("Database URL environment variable is required");
+  }
+  
+  if (process.env.SUPABASE_DATABASE_URL) {
+    console.log("Using Supabase database connection");
   }
   
   return {
