@@ -152,6 +152,7 @@ export default function ProjectDetailsDialog({
   };
 
   const handleDelete = () => {
+    setShowDeleteDialog(false);
     deleteProjectMutation.mutate();
   };
 
