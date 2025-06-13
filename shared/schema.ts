@@ -929,9 +929,6 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   actualHours: true,
   spentBudget: true,
-  estimatedHours: true,
-  budget: true,
-  clientName: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -943,6 +940,9 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   projectManagerId: z.number().min(1, "Project manager is required"),
   startDate: z.coerce.date({ required_error: "Start date is required" }),
   endDate: z.coerce.date({ required_error: "End date is required" }),
+  clientName: z.string().min(1, "Client name is required"),
+  budget: z.number().min(0.01, "Budget must be greater than 0"),
+  estimatedHours: z.number().min(0.1, "Estimated hours must be greater than 0"),
 });
 
 export const insertProjectAssignmentSchema = createInsertSchema(projectAssignments).omit({

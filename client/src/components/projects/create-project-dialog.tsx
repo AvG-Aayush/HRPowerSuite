@@ -16,6 +16,9 @@ const createProjectFormSchema = z.object({
   projectManagerId: z.number().min(1, "Project manager is required"),
   startDate: z.date(),
   endDate: z.date(),
+  clientName: z.string().min(1, "Client name is required"),
+  budget: z.number().min(0.01, "Budget must be greater than 0"),
+  estimatedHours: z.number().min(0.1, "Estimated hours must be greater than 0"),
   assignedEmployees: z.array(z.number()).min(1, "At least one employee must be assigned"),
   createdBy: z.number(),
 }).refine((data) => {
@@ -84,6 +87,9 @@ export default function CreateProjectDialog({
       createdBy: user?.id || 0,
       startDate: new Date(),
       endDate: new Date(),
+      clientName: "",
+      budget: 0,
+      estimatedHours: 0,
       assignedEmployees: [],
     },
   });
@@ -100,6 +106,9 @@ export default function CreateProjectDialog({
         createdBy: data.createdBy,
         startDate: data.startDate,
         endDate: data.endDate,
+        clientName: data.clientName,
+        budget: data.budget,
+        estimatedHours: data.estimatedHours,
         isActive: true,
       };
       
@@ -262,6 +271,66 @@ export default function CreateProjectDialog({
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="clientName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter client name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="budget"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Budget ($) *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00" 
+                          {...field}
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="estimatedHours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estimated Hours *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.1"
+                          min="0"
+                          placeholder="0.0" 
+                          {...field}
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
