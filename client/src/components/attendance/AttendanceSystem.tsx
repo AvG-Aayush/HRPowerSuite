@@ -174,11 +174,8 @@ export default function AttendanceSystem() {
   // Check-in mutation
   const checkInMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('/api/attendance/checkin', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-      return response;
+      const response = await apiRequest('POST', '/api/attendance/checkin', data);
+      return response.json();
     },
     onSuccess: () => {
       toast({

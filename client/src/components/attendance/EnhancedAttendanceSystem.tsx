@@ -153,7 +153,7 @@ export default function EnhancedAttendanceSystem() {
   // Admin status update mutation
   const updateStatusMutation = useMutation({
     mutationFn: (data: { recordId: number; status: string }) => 
-      apiRequest(`/api/attendance/${data.recordId}/status`, 'PUT', { status: data.status }),
+      apiRequest('PUT', `/api/attendance/${data.recordId}/status`, { status: data.status }),
     onSuccess: () => {
       setEditingRecord(null);
       setNewStatus("");
