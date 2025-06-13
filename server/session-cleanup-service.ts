@@ -4,7 +4,9 @@ import { lt } from 'drizzle-orm';
 
 export class SessionCleanupService {
   private cleanupInterval: NodeJS.Timeout | null = null;
+  private immediateCleanupInterval: NodeJS.Timeout | null = null;
   private readonly CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
+  private readonly IMMEDIATE_CLEANUP_INTERVAL = 60 * 1000; // 1 minute for immediate cleanup
   
   start() {
     if (this.cleanupInterval) {
@@ -12,12 +14,17 @@ export class SessionCleanupService {
       return;
     }
     
-    console.log('Session cleanup service started - runs every hour');
+    console.log('Session cleanup service started - immediate cleanup every minute, full cleanup every hour');
     
     // Run initial cleanup
     this.performCleanup();
     
-    // Schedule regular cleanup
+    // Schedule immediate cleanup for expired sessions (every minute)
+    this.immediateCleanupInterval = setInterval(() => {
+      this.performImmediateCleanup();
+    }, this.IMMEDIATE_CLEANUP_INTERVAL);
+    
+    // Schedule regular full cleanup (every hour)
     this.cleanupInterval = setInterval(() => {
       this.performCleanup();
     }, this.CLEANUP_INTERVAL);
@@ -27,10 +34,39 @@ export class SessionCleanupService {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
-      console.log('Session cleanup service stopped');
     }
+    if (this.immediateCleanupInterval) {
+      clearInterval(this.immediateCleanupInterval);
+      this.immediateCleanupInterval = null;
+    }
+    console.log('Session cleanup service stopped');
   }
   
+  private async performImmediateCleanup() {
+    try {
+      const now = new Date();
+      
+      // Delete expired sessions immediately
+      const deletedSessions = await db
+        .delete(sessions)
+        .where(lt(sessions.expiresAt, now))
+        .returning();
+      
+      if (deletedSessions.length > 0) {
+        console.log(`Immediate session cleanup: removed ${deletedSessions.length} expired sessions`);
+      }
+      
+      return {
+        expiredSessions: deletedSessions.length
+      };
+    } catch (error) {
+      console.error('Immediate session cleanup failed:', error);
+      return {
+        expiredSessions: 0
+      };
+    }
+  }
+
   private async performCleanup() {
     try {
       const now = new Date();
@@ -45,13 +81,28 @@ export class SessionCleanupService {
         console.log(`Session cleanup completed: removed ${deletedSessions.length} expired sessions`);
       }
       
+      // Additional cleanup: sessions older than 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const oldSessions = await db
+        .delete(sessions)
+        .where(lt(sessions.createdAt, thirtyDaysAgo))
+        .returning();
+      
+      if (oldSessions.length > 0) {
+        console.log(`Session cleanup: removed ${oldSessions.length} old sessions (30+ days)`);
+      }
+      
       return {
-        expiredSessions: deletedSessions.length
+        expiredSessions: deletedSessions.length,
+        oldSessions: oldSessions.length
       };
     } catch (error) {
       console.error('Session cleanup failed:', error);
       return {
-        expiredSessions: 0
+        expiredSessions: 0,
+        oldSessions: 0
       };
     }
   }

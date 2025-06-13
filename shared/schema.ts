@@ -1081,3 +1081,7 @@ export type InsertProjectLocation = z.infer<typeof insertProjectLocationSchema>;
 export type ProjectLocation = typeof projectLocations.$inferSelect;
 export type InsertProjectTimeEntry = z.infer<typeof insertProjectTimeEntrySchema>;
 export type ProjectTimeEntry = typeof projectTimeEntries.$inferSelect;
+
+// Session types
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = typeof sessions.$inferInsert;
