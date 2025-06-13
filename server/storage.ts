@@ -21,6 +21,10 @@ import {
   overtimeRequests, 
   workLocations,
   breaks,
+  projects,
+  projectAssignments,
+  projectLocations,
+  projectTimeEntries,
   type User, 
   type InsertUser, 
   type Attendance, 
@@ -59,7 +63,15 @@ import {
   type FileUpload,
   type InsertFileUpload,
   type OvertimeRequest,
-  type InsertOvertimeRequest
+  type InsertOvertimeRequest,
+  type Project,
+  type InsertProject,
+  type ProjectAssignment,
+  type InsertProjectAssignment,
+  type ProjectLocation,
+  type InsertProjectLocation,
+  type ProjectTimeEntry,
+  type InsertProjectTimeEntry
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, sql, or, like, count, isNull } from "drizzle-orm";
@@ -179,6 +191,34 @@ export interface IStorage {
   getWorkLocations(): Promise<any[]>;
   createWorkLocation(data: any): Promise<any>;
   getAllAttendanceWithUsers(): Promise<any[]>;
+  
+  // Project management
+  createProject(insertProject: InsertProject): Promise<Project>;
+  getAllProjects(): Promise<Project[]>;
+  getProjectById(id: number): Promise<Project | undefined>;
+  getProjectsByUser(userId: number): Promise<Project[]>;
+  updateProject(id: number, updates: Partial<Project>): Promise<Project>;
+  deleteProject(id: number): Promise<void>;
+  
+  // Project assignments
+  assignUserToProject(insertAssignment: InsertProjectAssignment): Promise<ProjectAssignment>;
+  getProjectAssignments(projectId: number): Promise<ProjectAssignment[]>;
+  getUserProjectAssignments(userId: number): Promise<ProjectAssignment[]>;
+  removeUserFromProject(projectId: number, userId: number): Promise<void>;
+  updateProjectAssignment(id: number, updates: Partial<ProjectAssignment>): Promise<ProjectAssignment>;
+  
+  // Project locations
+  addProjectLocation(insertLocation: InsertProjectLocation): Promise<ProjectLocation>;
+  getProjectLocations(projectId: number): Promise<ProjectLocation[]>;
+  removeProjectLocation(projectId: number, workLocationId: number): Promise<void>;
+  
+  // Project time entries
+  createProjectTimeEntry(insertTimeEntry: InsertProjectTimeEntry): Promise<ProjectTimeEntry>;
+  getProjectTimeEntries(projectId: number): Promise<ProjectTimeEntry[]>;
+  getUserProjectTimeEntries(userId: number, date?: Date): Promise<ProjectTimeEntry[]>;
+  updateProjectTimeEntry(id: number, updates: Partial<ProjectTimeEntry>): Promise<ProjectTimeEntry>;
+  deleteProjectTimeEntry(id: number): Promise<void>;
+  getDailyProjectTimeEntries(userId: number, date: Date): Promise<ProjectTimeEntry[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -716,6 +756,289 @@ export class DatabaseStorage implements IStorage {
   async createAiInsight(data: InsertAiInsight): Promise<AiInsight> {
     const [insight] = await db.insert(aiInsights).values(data).returning();
     return insight;
+  }
+
+  // Project management
+  async createProject(insertProject: InsertProject): Promise<Project> {
+    const [project] = await db.insert(projects).values(insertProject).returning();
+    return project;
+  }
+
+  async getAllProjects(): Promise<Project[]> {
+    return await db.select().from(projects)
+      .where(eq(projects.isActive, true))
+      .orderBy(desc(projects.createdAt));
+  }
+
+  async getProjectById(id: number): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project || undefined;
+  }
+
+  async getProjectsByUser(userId: number): Promise<Project[]> {
+    return await db.select({
+      id: projects.id,
+      name: projects.name,
+      description: projects.description,
+      status: projects.status,
+      priority: projects.priority,
+      startDate: projects.startDate,
+      endDate: projects.endDate,
+      estimatedHours: projects.estimatedHours,
+      actualHours: projects.actualHours,
+      budget: projects.budget,
+      spentBudget: projects.spentBudget,
+      clientName: projects.clientName,
+      projectManagerId: projects.projectManagerId,
+      createdBy: projects.createdBy,
+      isActive: projects.isActive,
+      createdAt: projects.createdAt,
+      updatedAt: projects.updatedAt
+    })
+    .from(projects)
+    .innerJoin(projectAssignments, eq(projects.id, projectAssignments.projectId))
+    .where(and(
+      eq(projectAssignments.userId, userId),
+      eq(projectAssignments.isActive, true),
+      eq(projects.isActive, true)
+    ))
+    .orderBy(desc(projects.createdAt));
+  }
+
+  async updateProject(id: number, updates: Partial<Project>): Promise<Project> {
+    const [project] = await db.update(projects).set(updates).where(eq(projects.id, id)).returning();
+    return project;
+  }
+
+  async deleteProject(id: number): Promise<void> {
+    await db.update(projects).set({ isActive: false }).where(eq(projects.id, id));
+  }
+
+  // Project assignments
+  async assignUserToProject(insertAssignment: InsertProjectAssignment): Promise<ProjectAssignment> {
+    const [assignment] = await db.insert(projectAssignments).values(insertAssignment).returning();
+    return assignment;
+  }
+
+  async getProjectAssignments(projectId: number): Promise<ProjectAssignment[]> {
+    return await db.select({
+      id: projectAssignments.id,
+      projectId: projectAssignments.projectId,
+      userId: projectAssignments.userId,
+      role: projectAssignments.role,
+      assignedHours: projectAssignments.assignedHours,
+      actualHours: projectAssignments.actualHours,
+      hourlyRate: projectAssignments.hourlyRate,
+      isActive: projectAssignments.isActive,
+      assignedBy: projectAssignments.assignedBy,
+      assignedAt: projectAssignments.assignedAt,
+      removedAt: projectAssignments.removedAt,
+      userName: users.fullName,
+      userEmail: users.email,
+      userRole: users.role,
+      department: users.department
+    })
+    .from(projectAssignments)
+    .innerJoin(users, eq(projectAssignments.userId, users.id))
+    .where(and(
+      eq(projectAssignments.projectId, projectId),
+      eq(projectAssignments.isActive, true)
+    ))
+    .orderBy(asc(users.fullName));
+  }
+
+  async getUserProjectAssignments(userId: number): Promise<ProjectAssignment[]> {
+    return await db.select({
+      id: projectAssignments.id,
+      projectId: projectAssignments.projectId,
+      userId: projectAssignments.userId,
+      role: projectAssignments.role,
+      assignedHours: projectAssignments.assignedHours,
+      actualHours: projectAssignments.actualHours,
+      hourlyRate: projectAssignments.hourlyRate,
+      isActive: projectAssignments.isActive,
+      assignedBy: projectAssignments.assignedBy,
+      assignedAt: projectAssignments.assignedAt,
+      removedAt: projectAssignments.removedAt,
+      projectName: projects.name,
+      projectStatus: projects.status,
+      projectPriority: projects.priority
+    })
+    .from(projectAssignments)
+    .innerJoin(projects, eq(projectAssignments.projectId, projects.id))
+    .where(and(
+      eq(projectAssignments.userId, userId),
+      eq(projectAssignments.isActive, true),
+      eq(projects.isActive, true)
+    ))
+    .orderBy(desc(projectAssignments.assignedAt));
+  }
+
+  async removeUserFromProject(projectId: number, userId: number): Promise<void> {
+    await db.update(projectAssignments)
+      .set({ isActive: false, removedAt: new Date() })
+      .where(and(
+        eq(projectAssignments.projectId, projectId),
+        eq(projectAssignments.userId, userId)
+      ));
+  }
+
+  async updateProjectAssignment(id: number, updates: Partial<ProjectAssignment>): Promise<ProjectAssignment> {
+    const [assignment] = await db.update(projectAssignments).set(updates).where(eq(projectAssignments.id, id)).returning();
+    return assignment;
+  }
+
+  // Project locations
+  async addProjectLocation(insertLocation: InsertProjectLocation): Promise<ProjectLocation> {
+    const [location] = await db.insert(projectLocations).values(insertLocation).returning();
+    return location;
+  }
+
+  async getProjectLocations(projectId: number): Promise<ProjectLocation[]> {
+    return await db.select({
+      id: projectLocations.id,
+      projectId: projectLocations.projectId,
+      workLocationId: projectLocations.workLocationId,
+      isActive: projectLocations.isActive,
+      createdAt: projectLocations.createdAt,
+      locationName: workLocations.name,
+      locationAddress: workLocations.address,
+      latitude: workLocations.latitude,
+      longitude: workLocations.longitude,
+      radius: workLocations.radius
+    })
+    .from(projectLocations)
+    .innerJoin(workLocations, eq(projectLocations.workLocationId, workLocations.id))
+    .where(and(
+      eq(projectLocations.projectId, projectId),
+      eq(projectLocations.isActive, true)
+    ))
+    .orderBy(asc(workLocations.name));
+  }
+
+  async removeProjectLocation(projectId: number, workLocationId: number): Promise<void> {
+    await db.update(projectLocations)
+      .set({ isActive: false })
+      .where(and(
+        eq(projectLocations.projectId, projectId),
+        eq(projectLocations.workLocationId, workLocationId)
+      ));
+  }
+
+  // Project time entries
+  async createProjectTimeEntry(insertTimeEntry: InsertProjectTimeEntry): Promise<ProjectTimeEntry> {
+    const [entry] = await db.insert(projectTimeEntries).values(insertTimeEntry).returning();
+    return entry;
+  }
+
+  async getProjectTimeEntries(projectId: number): Promise<ProjectTimeEntry[]> {
+    return await db.select({
+      id: projectTimeEntries.id,
+      projectId: projectTimeEntries.projectId,
+      userId: projectTimeEntries.userId,
+      attendanceId: projectTimeEntries.attendanceId,
+      date: projectTimeEntries.date,
+      hoursSpent: projectTimeEntries.hoursSpent,
+      description: projectTimeEntries.description,
+      taskType: projectTimeEntries.taskType,
+      billableHours: projectTimeEntries.billableHours,
+      status: projectTimeEntries.status,
+      approvedBy: projectTimeEntries.approvedBy,
+      approvedAt: projectTimeEntries.approvedAt,
+      rejectionReason: projectTimeEntries.rejectionReason,
+      createdAt: projectTimeEntries.createdAt,
+      updatedAt: projectTimeEntries.updatedAt,
+      userName: users.fullName,
+      userEmail: users.email
+    })
+    .from(projectTimeEntries)
+    .innerJoin(users, eq(projectTimeEntries.userId, users.id))
+    .where(eq(projectTimeEntries.projectId, projectId))
+    .orderBy(desc(projectTimeEntries.date));
+  }
+
+  async getUserProjectTimeEntries(userId: number, date?: Date): Promise<ProjectTimeEntry[]> {
+    let query = db.select({
+      id: projectTimeEntries.id,
+      projectId: projectTimeEntries.projectId,
+      userId: projectTimeEntries.userId,
+      attendanceId: projectTimeEntries.attendanceId,
+      date: projectTimeEntries.date,
+      hoursSpent: projectTimeEntries.hoursSpent,
+      description: projectTimeEntries.description,
+      taskType: projectTimeEntries.taskType,
+      billableHours: projectTimeEntries.billableHours,
+      status: projectTimeEntries.status,
+      approvedBy: projectTimeEntries.approvedBy,
+      approvedAt: projectTimeEntries.approvedAt,
+      rejectionReason: projectTimeEntries.rejectionReason,
+      createdAt: projectTimeEntries.createdAt,
+      updatedAt: projectTimeEntries.updatedAt,
+      projectName: projects.name,
+      projectStatus: projects.status
+    })
+    .from(projectTimeEntries)
+    .innerJoin(projects, eq(projectTimeEntries.projectId, projects.id))
+    .where(eq(projectTimeEntries.userId, userId));
+
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      query = query.where(and(
+        eq(projectTimeEntries.userId, userId),
+        gte(projectTimeEntries.date, startOfDay),
+        lte(projectTimeEntries.date, endOfDay)
+      ));
+    }
+
+    return await query.orderBy(desc(projectTimeEntries.date));
+  }
+
+  async updateProjectTimeEntry(id: number, updates: Partial<ProjectTimeEntry>): Promise<ProjectTimeEntry> {
+    const [entry] = await db.update(projectTimeEntries).set(updates).where(eq(projectTimeEntries.id, id)).returning();
+    return entry;
+  }
+
+  async deleteProjectTimeEntry(id: number): Promise<void> {
+    await db.delete(projectTimeEntries).where(eq(projectTimeEntries.id, id));
+  }
+
+  async getDailyProjectTimeEntries(userId: number, date: Date): Promise<ProjectTimeEntry[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return await db.select({
+      id: projectTimeEntries.id,
+      projectId: projectTimeEntries.projectId,
+      userId: projectTimeEntries.userId,
+      attendanceId: projectTimeEntries.attendanceId,
+      date: projectTimeEntries.date,
+      hoursSpent: projectTimeEntries.hoursSpent,
+      description: projectTimeEntries.description,
+      taskType: projectTimeEntries.taskType,
+      billableHours: projectTimeEntries.billableHours,
+      status: projectTimeEntries.status,
+      approvedBy: projectTimeEntries.approvedBy,
+      approvedAt: projectTimeEntries.approvedAt,
+      rejectionReason: projectTimeEntries.rejectionReason,
+      createdAt: projectTimeEntries.createdAt,
+      updatedAt: projectTimeEntries.updatedAt,
+      projectName: projects.name,
+      projectStatus: projects.status
+    })
+    .from(projectTimeEntries)
+    .innerJoin(projects, eq(projectTimeEntries.projectId, projects.id))
+    .where(and(
+      eq(projectTimeEntries.userId, userId),
+      gte(projectTimeEntries.date, startOfDay),
+      lte(projectTimeEntries.date, endOfDay)
+    ))
+    .orderBy(asc(projectTimeEntries.createdAt));
   }
 }
 

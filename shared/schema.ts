@@ -408,6 +408,70 @@ export const routines = pgTable("routines", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Projects table for project management
+export const projects = pgTable("projects", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("planning"), // planning, active, on_hold, completed, cancelled
+  priority: text("priority").notNull().default("medium"), // low, medium, high, critical
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  estimatedHours: real("estimated_hours"),
+  actualHours: real("actual_hours").default(0),
+  budget: real("budget"),
+  spentBudget: real("spent_budget").default(0),
+  clientName: text("client_name"),
+  projectManagerId: integer("project_manager_id").references(() => users.id),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Project assignments - linking employees to projects
+export const projectAssignments = pgTable("project_assignments", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  role: text("role").notNull().default("team_member"), // team_member, lead, analyst, designer, developer
+  assignedHours: real("assigned_hours"), // estimated hours for this person
+  actualHours: real("actual_hours").default(0), // tracked hours
+  hourlyRate: real("hourly_rate"), // billing rate for this person on this project
+  isActive: boolean("is_active").notNull().default(true),
+  assignedBy: integer("assigned_by").notNull().references(() => users.id),
+  assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+  removedAt: timestamp("removed_at"),
+});
+
+// Project locations - projects can be assigned to multiple locations
+export const projectLocations = pgTable("project_locations", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  workLocationId: integer("work_location_id").notNull().references(() => workLocations.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Project time tracking - employees log time spent on projects daily
+export const projectTimeEntries = pgTable("project_time_entries", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  attendanceId: integer("attendance_id").references(() => attendance.id), // link to daily attendance
+  date: timestamp("date").notNull(),
+  hoursSpent: real("hours_spent").notNull(),
+  description: text("description"),
+  taskType: text("task_type").notNull().default("development"), // development, design, testing, meeting, planning, documentation
+  billableHours: real("billable_hours"), // hours that can be billed to client
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   attendance: many(attendance),
@@ -422,11 +486,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   createdTasks: many(assignments, { relationName: "createdTasks" }),
   hiringRequests: many(hiringRequests),
   timeoffs: many(timeoffs),
-
   toilBalance: many(toilBalance),
   fileUploads: many(fileUploads),
   createdHolidays: many(holidays),
   overtimeRequests: many(overtimeRequests),
+  createdProjects: many(projects, { relationName: "createdProjects" }),
+  managedProjects: many(projects, { relationName: "managedProjects" }),
+  projectAssignments: many(projectAssignments),
+  projectTimeEntries: many(projectTimeEntries),
 }));
 
 export const attendanceRelations = relations(attendance, ({ one, many }) => ({
@@ -637,6 +704,67 @@ export const overtimeRequestsRelations = relations(overtimeRequests, ({ one }) =
   }),
 }));
 
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [projects.createdBy],
+    references: [users.id],
+    relationName: "createdProjects",
+  }),
+  projectManager: one(users, {
+    fields: [projects.projectManagerId],
+    references: [users.id],
+    relationName: "managedProjects",
+  }),
+  assignments: many(projectAssignments),
+  locations: many(projectLocations),
+  timeEntries: many(projectTimeEntries),
+}));
+
+export const projectAssignmentsRelations = relations(projectAssignments, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectAssignments.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [projectAssignments.userId],
+    references: [users.id],
+  }),
+  assignedBy: one(users, {
+    fields: [projectAssignments.assignedBy],
+    references: [users.id],
+  }),
+}));
+
+export const projectLocationsRelations = relations(projectLocations, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectLocations.projectId],
+    references: [projects.id],
+  }),
+  workLocation: one(workLocations, {
+    fields: [projectLocations.workLocationId],
+    references: [workLocations.id],
+  }),
+}));
+
+export const projectTimeEntriesRelations = relations(projectTimeEntries, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectTimeEntries.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [projectTimeEntries.userId],
+    references: [users.id],
+  }),
+  attendance: one(attendance, {
+    fields: [projectTimeEntries.attendanceId],
+    references: [attendance.id],
+  }),
+  approver: one(users, {
+    fields: [projectTimeEntries.approvedBy],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -805,6 +933,33 @@ export const insertOvertimeRequestSchema = createInsertSchema(overtimeRequests).
   processedAt: z.date().optional(),
 });
 
+export const insertProjectSchema = createInsertSchema(projects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  startDate: z.coerce.date().optional().nullable(),
+  endDate: z.coerce.date().optional().nullable(),
+});
+
+export const insertProjectAssignmentSchema = createInsertSchema(projectAssignments).omit({
+  id: true,
+  assignedAt: true,
+});
+
+export const insertProjectLocationSchema = createInsertSchema(projectLocations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProjectTimeEntrySchema = createInsertSchema(projectTimeEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  date: z.coerce.date(),
+});
+
 // Schema for leave requests
 export const leaveRequestSchema = z.object({
   type: z.enum(["annual", "casual", "sick", "emergency", "maternity", "paternity", "bereavement"]).refine(val => val, {
@@ -905,3 +1060,12 @@ export type InsertOvertimeRequest = z.infer<typeof insertOvertimeRequestSchema>;
 export type OvertimeRequest = typeof overtimeRequests.$inferSelect;
 export type LeaveRequestFormData = z.infer<typeof leaveRequestSchema>;
 export type ToilRequestFormData = z.infer<typeof toilLeaveRequestSchema>;
+
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Project = typeof projects.$inferSelect;
+export type InsertProjectAssignment = z.infer<typeof insertProjectAssignmentSchema>;
+export type ProjectAssignment = typeof projectAssignments.$inferSelect;
+export type InsertProjectLocation = z.infer<typeof insertProjectLocationSchema>;
+export type ProjectLocation = typeof projectLocations.$inferSelect;
+export type InsertProjectTimeEntry = z.infer<typeof insertProjectTimeEntrySchema>;
+export type ProjectTimeEntry = typeof projectTimeEntries.$inferSelect;
