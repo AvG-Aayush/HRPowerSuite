@@ -440,19 +440,6 @@ export const projects = pgTable("projects", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// Project assignments - simple linking of employees to projects (view only)
-export const projectAssignments = pgTable("project_assignments", {
-  id: serial("id").primaryKey(),
-  projectId: integer("project_id").notNull().references(() => projects.id),
-  userId: integer("user_id").notNull().references(() => users.id),
-  role: text("role").notNull().default("team_member"), // team_member, lead, analyst, designer, developer
-  isActive: boolean("is_active").notNull().default(true),
-  assignedBy: integer("assigned_by").notNull().references(() => users.id),
-  assignedAt: timestamp("assigned_at").notNull().defaultNow(),
-  removedAt: timestamp("removed_at"),
-});
-
-
 
 // Project time tracking - employees log time spent on projects daily
 export const projectTimeEntries = pgTable("project_time_entries", {
@@ -493,7 +480,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   overtimeRequests: many(overtimeRequests),
   createdProjects: many(projects, { relationName: "createdProjects" }),
   managedProjects: many(projects, { relationName: "managedProjects" }),
-  projectAssignments: many(projectAssignments),
   projectTimeEntries: many(projectTimeEntries),
 }));
 
@@ -716,26 +702,8 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [users.id],
     relationName: "managedProjects",
   }),
-  assignments: many(projectAssignments),
   timeEntries: many(projectTimeEntries),
 }));
-
-export const projectAssignmentsRelations = relations(projectAssignments, ({ one }) => ({
-  project: one(projects, {
-    fields: [projectAssignments.projectId],
-    references: [projects.id],
-  }),
-  user: one(users, {
-    fields: [projectAssignments.userId],
-    references: [users.id],
-  }),
-  assignedBy: one(users, {
-    fields: [projectAssignments.assignedBy],
-    references: [users.id],
-  }),
-}));
-
-
 
 export const projectTimeEntriesRelations = relations(projectTimeEntries, ({ one }) => ({
   project: one(projects, {
@@ -943,11 +911,6 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   budget: z.number().min(0.01, "Budget must be greater than 0"),
 });
 
-export const insertProjectAssignmentSchema = createInsertSchema(projectAssignments).omit({
-  id: true,
-  assignedAt: true,
-});
-
 
 
 export const insertProjectTimeEntrySchema = createInsertSchema(projectTimeEntries).omit({
@@ -1061,8 +1024,6 @@ export type ToilRequestFormData = z.infer<typeof toilLeaveRequestSchema>;
 
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
-export type InsertProjectAssignment = z.infer<typeof insertProjectAssignmentSchema>;
-export type ProjectAssignment = typeof projectAssignments.$inferSelect;
 
 export type InsertProjectTimeEntry = z.infer<typeof insertProjectTimeEntrySchema>;
 export type ProjectTimeEntry = typeof projectTimeEntries.$inferSelect;

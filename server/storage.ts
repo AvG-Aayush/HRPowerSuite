@@ -22,7 +22,7 @@ import {
   workLocations,
   breaks,
   projects,
-  projectAssignments,
+
   projectTimeEntries,
   type User, 
   type InsertUser, 
@@ -65,8 +65,7 @@ import {
   type InsertOvertimeRequest,
   type Project,
   type InsertProject,
-  type ProjectAssignment,
-  type InsertProjectAssignment,
+
   type ProjectTimeEntry,
   type InsertProjectTimeEntry
 } from "../shared/schema";
@@ -196,15 +195,6 @@ export interface IStorage {
   getProjectsByUser(userId: number): Promise<Project[]>;
   updateProject(id: number, updates: Partial<Project>): Promise<Project>;
   deleteProject(id: number): Promise<void>;
-  
-  // Project assignments
-  assignUserToProject(insertAssignment: InsertProjectAssignment): Promise<ProjectAssignment>;
-  getProjectAssignments(projectId: number): Promise<ProjectAssignment[]>;
-  getUserProjectAssignments(userId: number): Promise<ProjectAssignment[]>;
-  removeUserFromProject(projectId: number, userId: number): Promise<void>;
-  updateProjectAssignment(id: number, updates: Partial<ProjectAssignment>): Promise<ProjectAssignment>;
-  
-
   
   // Project time entries
   createProjectTimeEntry(insertTimeEntry: InsertProjectTimeEntry): Promise<ProjectTimeEntry>;
