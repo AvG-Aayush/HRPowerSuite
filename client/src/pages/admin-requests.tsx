@@ -70,7 +70,7 @@ export default function AdminRequestsPage() {
   // Approve request mutation
   const approveMutation = useMutation({
     mutationFn: async ({ requestType, id, data }: { requestType: string; id: number; data: any }) => {
-      return apiRequest('PUT', `/api/admin/approve-${requestType}/${id}`, data);
+      return apiRequest(`/api/admin/approve-${requestType}/${id}`, 'PUT', data);
     },
     onSuccess: () => {
       toast({
@@ -93,7 +93,7 @@ export default function AdminRequestsPage() {
   // Reject request mutation
   const rejectMutation = useMutation({
     mutationFn: async ({ requestType, id, data }: { requestType: string; id: number; data: any }) => {
-      return apiRequest('PUT', `/api/admin/reject-${requestType}/${id}`, data);
+      return apiRequest(`/api/admin/reject-${requestType}/${id}`, 'PUT', data);
     },
     onSuccess: () => {
       toast({

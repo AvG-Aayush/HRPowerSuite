@@ -29,7 +29,7 @@ export default function LeaveRequests() {
   // Approve/Reject leave request mutation
   const updateRequestMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return apiRequest('PUT', `/api/leave-requests/${id}`, { status });
+      return apiRequest(`/api/leave-requests/${id}`, 'PUT', { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/leave-requests/pending'] });
@@ -76,7 +76,7 @@ export default function LeaveRequests() {
   };
 
   // Create user lookup map
-  const userMap = new Map(users?.map((u: UserType) => [u.id, u]) || []);
+  const userMap = new Map(Array.isArray(users) ? users.map((u: UserType) => [u.id, u]) : []);
 
   if (!user || user.role !== 'admin') {
     return (
@@ -111,7 +111,7 @@ export default function LeaveRequests() {
               <AlertCircle className="h-5 w-5 text-orange-500" />
               <span>Pending Leave Requests</span>
               <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                {pendingRequests?.length || 0} pending
+                {Array.isArray(pendingRequests) ? pendingRequests.length : 0} pending
               </Badge>
             </CardTitle>
             <CardDescription>
@@ -138,7 +138,7 @@ export default function LeaveRequests() {
               </div>
             ))}
           </div>
-        ) : pendingRequests?.length === 0 ? (
+        ) : Array.isArray(pendingRequests) && pendingRequests.length === 0 ? (
           <div className="text-center py-8">
             <Check className="h-12 w-12 text-green-500 mx-auto mb-4" />
             <p className="text-muted-foreground">No pending leave requests</p>
@@ -148,7 +148,7 @@ export default function LeaveRequests() {
           </div>
         ) : (
           <div className="space-y-4">
-            {pendingRequests?.slice(0, 3).map((request: LeaveRequest) => {
+            {Array.isArray(pendingRequests) && pendingRequests.slice(0, 3).map((request: LeaveRequest) => {
               const userInfo = userMap.get(request.userId);
               return (
                 <div key={request.id} className="border border-border rounded-lg p-4">

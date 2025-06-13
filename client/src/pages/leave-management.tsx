@@ -265,7 +265,7 @@ export default function LeaveManagement() {
   // Approve/Reject leave request mutation
   const updateRequestMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return apiRequest('PUT', `/api/leave-requests/${id}`, { status });
+      return apiRequest(`/api/leave-requests/${id}`, 'PUT', { status });
     },
     onSuccess: () => {
       toast({
