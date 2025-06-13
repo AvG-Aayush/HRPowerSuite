@@ -14,14 +14,16 @@ if (!databaseUrl || databaseUrl.trim() === '') {
   process.exit(1);
 }
 
-console.log("Connecting to PostgreSQL database...");
-
 const isSupabase = databaseUrl.includes('supabase.com');
 const isNeon = databaseUrl.includes('neon.tech');
 const isReplit = databaseUrl.includes('replit') || databaseUrl.includes('localhost');
 
 if (isSupabase) {
   console.log('Connecting to Supabase database...');
+} else if (isNeon) {
+  console.log('Connecting to Neon database...');
+} else if (isReplit) {
+  console.log('Connecting to Replit PostgreSQL database...');
 } else {
   console.log('Connecting to PostgreSQL database...');
 }
