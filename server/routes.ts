@@ -1472,8 +1472,11 @@ export async function registerRoutes(app: Express) {
       console.log('Project creation request body:', req.body);
       console.log('User creating project:', req.user?.id);
       
-      const projectData = insertProjectSchema.parse({
-        ...req.body,
+      // Extract assignedEmployees separately as it's not part of the projects table
+      const { assignedEmployees, ...projectRequestData } = req.body;
+      
+      const projectData = insertProjectSchema.omit({ assignedEmployees: true }).parse({
+        ...projectRequestData,
         createdBy: req.user!.id
       });
       

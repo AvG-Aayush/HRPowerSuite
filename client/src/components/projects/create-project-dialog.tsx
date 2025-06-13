@@ -5,10 +5,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { insertProjectSchema } from "@shared/schema";
+import { createProjectFormSchema } from "@shared/schema";
 import { z } from "zod";
 
-type InsertProject = z.infer<typeof insertProjectSchema>;
+type CreateProjectForm = z.infer<typeof createProjectFormSchema>;
 import {
   Dialog,
   DialogContent,
@@ -56,8 +56,8 @@ export default function CreateProjectDialog({
     enabled: open,
   });
 
-  const form = useForm<InsertProject>({
-    resolver: zodResolver(insertProjectSchema),
+  const form = useForm<CreateProjectForm>({
+    resolver: zodResolver(createProjectFormSchema),
     defaultValues: {
       name: "",
       description: "",
