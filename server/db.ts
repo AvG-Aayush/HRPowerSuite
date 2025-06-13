@@ -2,10 +2,12 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "../shared/schema";
 import dotenv from "dotenv";
-dotenv.config()
+
+// Load environment variables
+dotenv.config();
 
 // Use Supabase PostgreSQL database
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres.lwydfwgzzanwtdebulmd:campaignnepal123@aws-0-us-east-2.pooler.supabase.com:6543/postgres";
 
 if (databaseUrl) {
   console.log('Using Supabase database connection');

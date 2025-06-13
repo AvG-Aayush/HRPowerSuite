@@ -31,19 +31,17 @@ function getOptionalEnvVar(name: string, fallback: string): string {
 }
 
 export function createAppConfig(): AppConfig {
-  // Use Supabase DATABASE_URL
-  const databaseUrl = process.env.DATABASE_URL;
+  // Use Supabase DATABASE_URL with fallback
+  const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres.lwydfwgzzanwtdebulmd:campaignnepal123@aws-0-us-east-2.pooler.supabase.com:6543/postgres";
   
-  if (!databaseUrl) {
-    console.warn("DATABASE_URL not set for Supabase connection");
-  } else if (databaseUrl.includes('supabase.com')) {
+  if (databaseUrl.includes('supabase.com')) {
     console.log("Using Supabase database connection");
   }
   
   return {
     database: {
-      url: databaseUrl || "",
-      connectionString: databaseUrl || "",
+      url: databaseUrl,
+      connectionString: databaseUrl,
     },
     auth: {
       sessionSecret: getOptionalEnvVar('SESSION_SECRET', 'default-session-secret-for-development'),

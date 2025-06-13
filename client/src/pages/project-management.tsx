@@ -73,13 +73,13 @@ export default function ProjectManagement() {
   const isAdminOrHR = user?.role === 'admin' || user?.role === 'hr';
 
   // Fetch projects
-  const { data: projects = [], isLoading: projectsLoading } = useQuery({
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ['/api/projects'],
     enabled: !!user,
   });
 
   // Fetch user's project assignments
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
+  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<ProjectAssignment[]>({
     queryKey: ['/api/user/project-assignments'],
     enabled: !!user,
   });
