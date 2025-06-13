@@ -29,7 +29,6 @@ import {
   insertCalendarEventSchema,
   insertOvertimeRequestSchema,
   insertProjectSchema,
-  insertProjectAssignmentSchema,
   insertProjectTimeEntrySchema,
   loginSchema,
   registerSchema,

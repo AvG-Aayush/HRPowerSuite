@@ -760,30 +760,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProjectsByUser(userId: number): Promise<Project[]> {
-    return await db.select({
-      id: projects.id,
-      name: projects.name,
-      description: projects.description,
-      status: projects.status,
-      priority: projects.priority,
-      startDate: projects.startDate,
-      endDate: projects.endDate,
-      estimatedHours: projects.estimatedHours,
-      actualHours: projects.actualHours,
-      budget: projects.budget,
-      spentBudget: projects.spentBudget,
-      clientName: projects.clientName,
-      projectManagerId: projects.projectManagerId,
-      createdBy: projects.createdBy,
-      isActive: projects.isActive,
-      createdAt: projects.createdAt,
-      updatedAt: projects.updatedAt
-    })
+    return await db.select()
     .from(projects)
-    .innerJoin(projectAssignments, eq(projects.id, projectAssignments.projectId))
     .where(and(
-      eq(projectAssignments.userId, userId),
-      eq(projectAssignments.isActive, true),
+      or(
+        eq(projects.projectManagerId, userId),
+        eq(projects.createdBy, userId)
+      ),
       eq(projects.isActive, true)
     ))
     .orderBy(desc(projects.createdAt));
@@ -802,75 +785,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(projects).where(eq(projects.id, id));
   }
 
-  // Project assignments
-  async assignUserToProject(insertAssignment: InsertProjectAssignment): Promise<ProjectAssignment> {
-    const [assignment] = await db.insert(projectAssignments).values(insertAssignment).returning();
-    return assignment;
-  }
 
-  async getProjectAssignments(projectId: number): Promise<ProjectAssignment[]> {
-    return await db.select({
-      id: projectAssignments.id,
-      projectId: projectAssignments.projectId,
-      userId: projectAssignments.userId,
-      role: projectAssignments.role,
-      isActive: projectAssignments.isActive,
-      assignedBy: projectAssignments.assignedBy,
-      assignedAt: projectAssignments.assignedAt,
-      removedAt: projectAssignments.removedAt,
-      userName: users.fullName,
-      userEmail: users.email,
-      userRole: users.role,
-      department: users.department
-    })
-    .from(projectAssignments)
-    .innerJoin(users, eq(projectAssignments.userId, users.id))
-    .where(and(
-      eq(projectAssignments.projectId, projectId),
-      eq(projectAssignments.isActive, true)
-    ))
-    .orderBy(asc(users.fullName));
-  }
-
-  async getUserProjectAssignments(userId: number): Promise<ProjectAssignment[]> {
-    return await db.select({
-      id: projectAssignments.id,
-      projectId: projectAssignments.projectId,
-      userId: projectAssignments.userId,
-      role: projectAssignments.role,
-      isActive: projectAssignments.isActive,
-      assignedBy: projectAssignments.assignedBy,
-      assignedAt: projectAssignments.assignedAt,
-      removedAt: projectAssignments.removedAt,
-      projectName: projects.name,
-      projectStatus: projects.status,
-      projectPriority: projects.priority,
-      projectStartDate: projects.startDate,
-      projectEndDate: projects.endDate
-    })
-    .from(projectAssignments)
-    .innerJoin(projects, eq(projectAssignments.projectId, projects.id))
-    .where(and(
-      eq(projectAssignments.userId, userId),
-      eq(projectAssignments.isActive, true),
-      eq(projects.isActive, true)
-    ))
-    .orderBy(desc(projectAssignments.assignedAt));
-  }
-
-  async removeUserFromProject(projectId: number, userId: number): Promise<void> {
-    await db.update(projectAssignments)
-      .set({ isActive: false, removedAt: new Date() })
-      .where(and(
-        eq(projectAssignments.projectId, projectId),
-        eq(projectAssignments.userId, userId)
-      ));
-  }
-
-  async updateProjectAssignment(id: number, updates: Partial<ProjectAssignment>): Promise<ProjectAssignment> {
-    const [assignment] = await db.update(projectAssignments).set(updates).where(eq(projectAssignments.id, id)).returning();
-    return assignment;
-  }
 
 
 
