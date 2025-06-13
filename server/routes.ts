@@ -1670,47 +1670,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Project Assignments
-  app.get('/api/projects/:id/assignments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const projectId = parseInt(req.params.id);
-      const assignments = await storage.getProjectAssignments(projectId);
-      res.json(assignments);
-    } catch (error) {
-      console.error('Failed to fetch project assignments:', error);
-      res.status(500).json({ error: 'Failed to fetch project assignments' });
-    }
-  });
 
-  app.post('/api/projects/:id/assignments', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const projectId = parseInt(req.params.id);
-      const assignmentData = insertProjectAssignmentSchema.parse({
-        ...req.body,
-        projectId,
-        assignedBy: req.user!.id
-      });
-      
-      const assignment = await storage.assignUserToProject(assignmentData);
-      res.status(201).json(assignment);
-    } catch (error) {
-      console.error('Failed to assign user to project:', error);
-      res.status(400).json({ error: 'Failed to assign user to project' });
-    }
-  });
-
-  app.delete('/api/projects/:projectId/assignments/:userId', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const userId = parseInt(req.params.userId);
-      
-      await storage.removeUserFromProject(projectId, userId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Failed to remove user from project:', error);
-      res.status(400).json({ error: 'Failed to remove user from project' });
-    }
-  });
 
 
 
@@ -1801,14 +1761,14 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Get user's project assignments
-  app.get('/api/user/project-assignments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // Get user's projects (simplified without assignments)
+  app.get('/api/user/projects', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const assignments = await storage.getUserProjectAssignments(req.user!.id);
-      res.json(assignments);
+      const projects = await storage.getProjectsByUser(req.user!.id);
+      res.json(projects);
     } catch (error) {
-      console.error('Failed to fetch user project assignments:', error);
-      res.status(500).json({ error: 'Failed to fetch user project assignments' });
+      console.error('Failed to fetch user projects:', error);
+      res.status(500).json({ error: 'Failed to fetch user projects' });
     }
   });
 
