@@ -123,9 +123,9 @@ export default function EnhancedAttendanceSystem() {
   const attendanceMutation = useMutation({
     mutationFn: async (data: any) => {
       if (data.isCheckOut) {
-        return apiRequest(`/api/attendance/checkout/${todayAttendance?.id}`, 'POST', data);
+        return apiRequest('POST', `/api/attendance/checkout/${todayAttendance?.id}`, data);
       } else {
-        return apiRequest('/api/attendance/checkin', 'POST', data);
+        return apiRequest('POST', '/api/attendance/checkin', data);
       }
     },
     onSuccess: () => {

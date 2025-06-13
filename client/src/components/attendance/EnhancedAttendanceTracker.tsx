@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Clock, CheckCircle, MapPin, AlertCircle, Timer, 
   Calendar, Activity, Zap, User, Settings 
@@ -72,18 +73,10 @@ export default function EnhancedAttendanceTracker() {
   const attendanceMutation = useMutation({
     mutationFn: async (data: any) => {
       if (data.isCheckOut) {
-        const response = await fetch(`/api/attendance/checkout/${userTodayAttendance?.id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
+        const response = await apiRequest('POST', `/api/attendance/checkout/${userTodayAttendance?.id}`, data);
         return response.json();
       } else {
-        const response = await fetch('/api/attendance/checkin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
+        const response = await apiRequest('POST', '/api/attendance/checkin', data);
         return response.json();
       }
     },
