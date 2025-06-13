@@ -31,11 +31,13 @@ function getOptionalEnvVar(name: string, fallback: string): string {
 }
 
 export function createAppConfig(): AppConfig {
-  // Use DATABASE_URL if available
+  // Use Supabase DATABASE_URL
   const databaseUrl = process.env.DATABASE_URL;
   
   if (!databaseUrl) {
-    console.warn("DATABASE_URL not set - database operations may fail");
+    console.warn("DATABASE_URL not set for Supabase connection");
+  } else if (databaseUrl.includes('supabase.com')) {
+    console.log("Using Supabase database connection");
   }
   
   return {
