@@ -4,8 +4,9 @@ import * as schema from "../shared/schema";
 import dotenv from "dotenv";
 dotenv.config()
 
-// Use Supabase database with fallback
-const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+// Use Supabase database
+const supabaseUrl = "postgresql://postgres.lwydfwgzzanwtdebulmd:campaignnepal123@aws-0-us-east-2.pooler.supabase.com:6543/postgres";
+const databaseUrl = process.env.SUPABASE_DATABASE_URL || supabaseUrl;
 console.log(`Environment check - Using database URL: ${databaseUrl ? 'configured' : 'missing'}`);
 
 if (!databaseUrl) {
