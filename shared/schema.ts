@@ -938,6 +938,8 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
 }).extend({
   name: z.string().min(1, "Project name is required"),
   description: z.string().min(1, "Project description is required"),
+  status: z.enum(["planning", "active", "on_hold", "completed", "cancelled"]).default("planning"),
+  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
   projectManagerId: z.number().min(1, "Project manager is required"),
   startDate: z.coerce.date({ required_error: "Start date is required" }),
   endDate: z.coerce.date({ required_error: "End date is required" }),

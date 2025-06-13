@@ -61,6 +61,8 @@ export default function CreateProjectDialog({
     defaultValues: {
       name: "",
       description: "",
+      status: "planning",
+      priority: "medium",
       projectManagerId: 0,
       createdBy: user?.id || 0,
       startDate: new Date(),
@@ -75,23 +77,24 @@ export default function CreateProjectDialog({
       const projectData = {
         name: data.name,
         description: data.description,
+        status: data.status,
+        priority: data.priority,
         projectManagerId: data.projectManagerId,
         createdBy: data.createdBy,
         startDate: data.startDate,
         endDate: data.endDate,
-        status: "planning",
-        priority: "medium",
         isActive: true,
       };
       
-      const project = await apiRequest('/api/projects', 'POST', projectData);
+      const project: any = await apiRequest('/api/projects', 'POST', projectData);
+      const projectId = project.id || project.insertId;
       
       // Then create assignments
-      if (data.assignedEmployees.length > 0) {
+      if (data.assignedEmployees.length > 0 && projectId) {
         await Promise.all(
           data.assignedEmployees.map(userId => 
-            apiRequest('/api/projects/' + project.id + '/assignments', 'POST', {
-              projectId: project.id,
+            apiRequest('/api/projects/' + projectId + '/assignments', 'POST', {
+              projectId: projectId,
               userId,
               role: 'team_member',
               assignedBy: user?.id || 0,
@@ -165,6 +168,57 @@ export default function CreateProjectDialog({
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="planning">Planning</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="on_hold">On Hold</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="critical">Critical</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
