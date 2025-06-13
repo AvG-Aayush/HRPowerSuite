@@ -271,7 +271,7 @@ export default function Profile() {
             <div className="flex justify-center mb-4">
               <div className="relative">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={profile?.profilePicture} />
+                  <AvatarImage src={profile?.profilePicture || ""} />
                   <AvatarFallback className="text-xl">
                     {profile?.fullName?.split(' ').map(n => n[0]).join('') || 'U'}
                   </AvatarFallback>
@@ -493,12 +493,11 @@ export default function Profile() {
                     <div>
                       <FormLabel>Skills</FormLabel>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {profile?.skills?.map((skill, index) => (
-                          <Badge key={index} variant="outline">
-                            {skill}
+                        {skillFields.length > 0 ? skillFields.map((skill, index) => (
+                          <Badge key={skill.id} variant="outline">
+                            {skill.name}
                           </Badge>
-                        ))}
-                        {(!profile?.skills || profile.skills.length === 0) && (
+                        )) : (
                           <p className="text-sm text-muted-foreground">No skills added yet</p>
                         )}
                       </div>

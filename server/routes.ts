@@ -126,16 +126,27 @@ export async function registerRoutes(app: Express) {
     try {
       const updates = req.body;
       
+      console.log(`Profile update request - User ID: ${req.user!.id}, Updates:`, updates);
+      
       // Remove sensitive fields that shouldn't be updated via this endpoint
       delete updates.password;
       delete updates.role;
       delete updates.id;
 
       const user = await storage.updateUser(req.user!.id, updates);
+      console.log(`Profile update successful for user ${req.user!.id}`);
       res.json({ user: { ...user, password: undefined } });
     } catch (error) {
       console.error('Profile update error:', error);
-      res.status(400).json({ error: 'Failed to update profile' });
+      if (error instanceof Error) {
+        console.error('Error details:', error.message, error.stack);
+        res.status(400).json({ 
+          error: 'Failed to update profile',
+          details: error.message 
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to update profile' });
+      }
     }
   });
 
@@ -143,11 +154,22 @@ export async function registerRoutes(app: Express) {
     try {
       const { profilePicture } = updateProfilePictureSchema.parse(req.body);
       
+      console.log(`Profile picture update request - User ID: ${req.user!.id}`);
+      
       const user = await storage.updateUser(req.user!.id, { profilePicture });
+      console.log(`Profile picture update successful for user ${req.user!.id}`);
       res.json({ user: { ...user, password: undefined } });
     } catch (error) {
       console.error('Profile picture update error:', error);
-      res.status(400).json({ error: 'Failed to update profile picture' });
+      if (error instanceof Error) {
+        console.error('Error details:', error.message, error.stack);
+        res.status(400).json({ 
+          error: 'Failed to update profile picture',
+          details: error.message 
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to update profile picture' });
+      }
     }
   });
 
