@@ -100,9 +100,17 @@ export interface IStorage {
   // Messages
   createMessage(insertMessage: InsertMessage): Promise<Message>;
   getMessagesByUser(userId: number, otherUserId: number): Promise<Message[]>;
+  getMessagesBetweenUsers(userId: number, otherUserId: number): Promise<Message[]>;
   getMessagesByGroup(groupId: number): Promise<Message[]>;
+  getGroupMessages(groupId: number): Promise<Message[]>;
   markMessagesAsRead(userId: number, messageIds: number[]): Promise<void>;
   getUnreadMessageCount(userId: number): Promise<number>;
+  
+  // Message delivery logs
+  createMessageDeliveryLog(insertDeliveryLog: InsertMessageDeliveryLog): Promise<MessageDeliveryLog>;
+  getMessageDeliveryStatus(messageId: number): Promise<MessageDeliveryLog[]>;
+  updateMessageDeliveryStatus(messageId: number, recipientId: number, status: string, errorMessage?: string): Promise<void>;
+  getFailedMessages(): Promise<Message[]>;
   
   // Chat groups
   createChatGroup(insertChatGroup: InsertChatGroup): Promise<ChatGroup>;
@@ -336,7 +344,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(messages.sentAt));
   }
 
+  async getMessagesBetweenUsers(userId: number, otherUserId: number): Promise<Message[]> {
+    return await db.select().from(messages)
+      .where(or(
+        and(eq(messages.senderId, userId), eq(messages.recipientId, otherUserId)),
+        and(eq(messages.senderId, otherUserId), eq(messages.recipientId, userId))
+      ))
+      .orderBy(asc(messages.sentAt));
+  }
+
   async getMessagesByGroup(groupId: number): Promise<Message[]> {
+    return await db.select().from(messages)
+      .where(eq(messages.groupId, groupId))
+      .orderBy(asc(messages.sentAt));
+  }
+
+  async getGroupMessages(groupId: number): Promise<Message[]> {
     return await db.select().from(messages)
       .where(eq(messages.groupId, groupId))
       .orderBy(asc(messages.sentAt));
