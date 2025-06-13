@@ -174,13 +174,13 @@ export const shifts = pgTable("shifts", {
 // Encrypted chat messages
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  senderId: integer("sender_id").notNull().references(() => users.id),
-  recipientId: integer("recipient_id").references(() => users.id), // null for group messages
-  groupId: integer("group_id"), // for group chats
+  senderId: integer("senderId").notNull().references(() => users.id),
+  recipientId: integer("recipientId").references(() => users.id), // null for group messages
+  groupId: integer("groupId"), // for group chats
   content: text("content").notNull(), // encrypted content
-  messageType: text("message_type").notNull().default("text"), // text, file, image
-  isRead: boolean("is_read").notNull().default(false),
-  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  messageType: text("messageType").notNull().default("text"), // text, file, image
+  isRead: boolean("isRead").notNull().default(false),
+  sentAt: timestamp("sentAt").notNull().defaultNow(),
 });
 
 // Chat groups
