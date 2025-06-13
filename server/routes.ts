@@ -908,7 +908,8 @@ export async function registerRoutes(app: Express) {
       const leaveRequest = await storage.updateLeaveRequest(id, {
         status: 'approved',
         approvedBy: req.user!.id,
-        rejectionReason: approvalNotes || null
+        approvalNotes: approvalNotes || null,
+        processedAt: new Date()
       });
       
       res.json(leaveRequest);
@@ -926,7 +927,8 @@ export async function registerRoutes(app: Express) {
       const leaveRequest = await storage.updateLeaveRequest(id, {
         status: 'rejected',
         approvedBy: req.user!.id,
-        rejectionReason
+        rejectionReason,
+        processedAt: new Date()
       });
       
       res.json(leaveRequest);
