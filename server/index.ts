@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { cleanupService } from "./cleanup-service";
 import { messagingCleanupService } from "./messaging-cleanup-service";
+import { sessionCleanupService } from "./session-cleanup-service";
 import { setupDatabase, validateAuthenticationSystem } from "./database-setup";
 import { createAppConfig } from "./config";
 import { pool } from "./db";
@@ -107,6 +108,9 @@ const startServer = async () => {
 
   messagingCleanupService.start();
   log("Messaging cleanup service started - handles message delivery and cleanup");
+
+  sessionCleanupService.start();
+  log("Session cleanup service started - removes expired sessions every hour");
 
   attendanceScheduler.start();
   log("Attendance scheduler started - handles midnight check-outs");
