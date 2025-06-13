@@ -778,7 +778,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProject(id: number): Promise<void> {
-    // First, delete all related project time entries
+    // First, delete any project assignments that might exist in the database
+    await db.execute(sql`DELETE FROM project_assignments WHERE project_id = ${id}`);
+    
+    // Then, delete all related project time entries
     await db.delete(projectTimeEntries).where(eq(projectTimeEntries.projectId, id));
     
     // Finally, delete the project itself
