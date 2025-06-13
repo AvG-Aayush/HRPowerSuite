@@ -435,6 +435,7 @@ export const projects = pgTable("projects", {
   spentBudget: real("spent_budget").default(0),
   clientName: text("client_name"),
   projectManagerId: integer("project_manager_id").references(() => users.id),
+  locations: text("locations"), // Comma-separated list of locations
   createdBy: integer("created_by").notNull().references(() => users.id),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -456,14 +457,7 @@ export const projectAssignments = pgTable("project_assignments", {
   removedAt: timestamp("removed_at"),
 });
 
-// Project locations - projects can be assigned to multiple locations
-export const projectLocations = pgTable("project_locations", {
-  id: serial("id").primaryKey(),
-  projectId: integer("project_id").notNull().references(() => projects.id),
-  workLocationId: integer("work_location_id").notNull().references(() => workLocations.id),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+
 
 // Project time tracking - employees log time spent on projects daily
 export const projectTimeEntries = pgTable("project_time_entries", {
@@ -728,7 +722,6 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     relationName: "managedProjects",
   }),
   assignments: many(projectAssignments),
-  locations: many(projectLocations),
   timeEntries: many(projectTimeEntries),
 }));
 
@@ -747,16 +740,7 @@ export const projectAssignmentsRelations = relations(projectAssignments, ({ one 
   }),
 }));
 
-export const projectLocationsRelations = relations(projectLocations, ({ one }) => ({
-  project: one(projects, {
-    fields: [projectLocations.projectId],
-    references: [projects.id],
-  }),
-  workLocation: one(workLocations, {
-    fields: [projectLocations.workLocationId],
-    references: [workLocations.id],
-  }),
-}));
+
 
 export const projectTimeEntriesRelations = relations(projectTimeEntries, ({ one }) => ({
   project: one(projects, {
@@ -959,10 +943,7 @@ export const insertProjectAssignmentSchema = createInsertSchema(projectAssignmen
   assignedAt: true,
 });
 
-export const insertProjectLocationSchema = createInsertSchema(projectLocations).omit({
-  id: true,
-  createdAt: true,
-});
+
 
 export const insertProjectTimeEntrySchema = createInsertSchema(projectTimeEntries).omit({
   id: true,
@@ -1077,8 +1058,7 @@ export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 export type InsertProjectAssignment = z.infer<typeof insertProjectAssignmentSchema>;
 export type ProjectAssignment = typeof projectAssignments.$inferSelect;
-export type InsertProjectLocation = z.infer<typeof insertProjectLocationSchema>;
-export type ProjectLocation = typeof projectLocations.$inferSelect;
+
 export type InsertProjectTimeEntry = z.infer<typeof insertProjectTimeEntrySchema>;
 export type ProjectTimeEntry = typeof projectTimeEntries.$inferSelect;
 

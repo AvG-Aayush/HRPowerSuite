@@ -23,7 +23,6 @@ import {
   breaks,
   projects,
   projectAssignments,
-  projectLocations,
   projectTimeEntries,
   type User, 
   type InsertUser, 
@@ -68,8 +67,6 @@ import {
   type InsertProject,
   type ProjectAssignment,
   type InsertProjectAssignment,
-  type ProjectLocation,
-  type InsertProjectLocation,
   type ProjectTimeEntry,
   type InsertProjectTimeEntry
 } from "../shared/schema";
