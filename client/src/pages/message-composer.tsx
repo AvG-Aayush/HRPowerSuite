@@ -49,7 +49,12 @@ export default function MessageComposer() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: MessageFormData) => {
-      return apiRequest('POST', '/api/messages/compose', data);
+      const response = await apiRequest('POST', '/api/messages', {
+        ...data,
+        messageType: data.messageType || 'text',
+        priority: 'normal'
+      });
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -62,9 +67,10 @@ export default function MessageComposer() {
       queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
     },
     onError: (error: any) => {
+      console.error('Message composition failed:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to send message",
+        title: "Message Failed",
+        description: "Unable to send message. It will be retried automatically.",
         variant: "destructive",
       });
     },

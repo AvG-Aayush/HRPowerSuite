@@ -4,6 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { cleanupService } from "./cleanup-service";
+import { messagingCleanupService } from "./messaging-cleanup-service";
 import { setupDatabase, validateAuthenticationSystem } from "./database-setup";
 import { createAppConfig } from "./config";
 import { pool } from "./db";
@@ -104,6 +105,9 @@ const startServer = async () => {
   cleanupService.start();
   log("Cleanup service started - runs every hour");
 
+  messagingCleanupService.start();
+  log("Messaging cleanup service started - handles message delivery and cleanup");
+
   attendanceScheduler.start();
   log("Attendance scheduler started - handles midnight check-outs");
 
@@ -129,6 +133,7 @@ const startServer = async () => {
   const shutdown = () => {
     log("Received shutdown signal, closing gracefully");
     cleanupService.stop();
+    messagingCleanupService.stop();
     attendanceScheduler.stop();
     server.close(() => {
       log("Server closed");

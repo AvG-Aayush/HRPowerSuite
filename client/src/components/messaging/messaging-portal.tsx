@@ -55,21 +55,28 @@ export default function MessagingPortal() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { recipientId: number; content: string }) => {
-      return apiRequest('POST', '/api/messages', {
+      const response = await apiRequest('POST', '/api/messages', {
         recipientId: messageData.recipientId,
         content: messageData.content,
         messageType: 'text',
+        priority: 'normal'
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/messages/user', selectedUser?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/messages/unread-count'] });
       setMessage("");
+      toast({
+        title: "Success",
+        description: "Message sent successfully",
+      });
     },
     onError: (error: any) => {
+      console.error('Message sending failed:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to send message",
+        title: "Message Failed",
+        description: "Unable to send message. It will be retried automatically.",
         variant: "destructive",
       });
     },
