@@ -94,7 +94,6 @@ export default function ProjectDetailsDialog({
     priority: project.priority,
     startDate: project.startDate ? project.startDate.split('T')[0] : '',
     endDate: project.endDate ? project.endDate.split('T')[0] : '',
-    estimatedHours: project.estimatedHours || 0,
     budget: project.budget || 0,
     clientName: project.clientName || '',
   });

@@ -429,7 +429,6 @@ export const projects = pgTable("projects", {
   priority: text("priority").notNull().default("medium"), // low, medium, high, critical
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
-  estimatedHours: real("estimated_hours"),
   actualHours: real("actual_hours").default(0),
   budget: real("budget"),
   spentBudget: real("spent_budget").default(0),
@@ -942,7 +941,6 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   endDate: z.coerce.date({ required_error: "End date is required" }),
   clientName: z.string().min(1, "Client name is required"),
   budget: z.number().min(0.01, "Budget must be greater than 0"),
-  estimatedHours: z.number().min(0.1, "Estimated hours must be greater than 0"),
 });
 
 export const insertProjectAssignmentSchema = createInsertSchema(projectAssignments).omit({
