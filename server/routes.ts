@@ -1526,6 +1526,20 @@ export async function registerRoutes(app: Express) {
     try {
       const id = parseInt(req.params.id);
       
+      console.log(`Project update request - ID: ${id}, User: ${req.user?.username}, Role: ${req.user?.role}`);
+      console.log('Update data:', req.body);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid project ID' });
+      }
+      
+      // Check if project exists first
+      const existingProject = await storage.getProjectById(id);
+      if (!existingProject) {
+        console.log(`Project ${id} not found for update`);
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       // Validate the update data
       const updates = {
         ...req.body,
@@ -1534,20 +1548,18 @@ export async function registerRoutes(app: Express) {
       
       const project = await storage.updateProject(id, updates);
       
-      if (!project) {
-        return res.status(404).json({ error: 'Project not found' });
-      }
-      
+      console.log('Project updated successfully:', project);
       res.json(project);
     } catch (error) {
       console.error('Failed to update project:', error);
       if (error instanceof Error) {
+        console.error('Error details:', error.message, error.stack);
         res.status(400).json({ 
           error: 'Failed to update project',
           details: error.message 
         });
       } else {
-        res.status(400).json({ error: 'Failed to update project' });
+        res.status(500).json({ error: 'Failed to update project' });
       }
     }
   });
@@ -1556,6 +1568,8 @@ export async function registerRoutes(app: Express) {
     try {
       const id = parseInt(req.params.id);
       
+      console.log(`Project delete request - ID: ${id}, User: ${req.user?.username}, Role: ${req.user?.role}`);
+      
       if (isNaN(id)) {
         return res.status(400).json({ error: 'Invalid project ID' });
       }
@@ -1563,14 +1577,19 @@ export async function registerRoutes(app: Express) {
       // Check if project exists before deletion
       const existingProject = await storage.getProjectById(id);
       if (!existingProject) {
+        console.log(`Project ${id} not found for deletion`);
         return res.status(404).json({ error: 'Project not found' });
       }
       
+      console.log(`Deleting project ${id}: ${existingProject.name}`);
       await storage.deleteProject(id);
+      
+      console.log(`Project ${id} deleted successfully (set to inactive)`);
       res.json({ success: true, message: 'Project deleted successfully' });
     } catch (error) {
       console.error('Failed to delete project:', error);
       if (error instanceof Error) {
+        console.error('Error details:', error.message, error.stack);
         res.status(400).json({ 
           error: 'Failed to delete project',
           details: error.message 

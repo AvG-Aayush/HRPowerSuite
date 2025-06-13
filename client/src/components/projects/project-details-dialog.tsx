@@ -111,9 +111,12 @@ export default function ProjectDetailsDialog({
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       setIsEditing(false);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Project update error:', error);
+      const errorMessage = error?.details || error?.message || 'Unknown error occurred';
       toast({ 
         title: "Failed to update project",
+        description: errorMessage,
         variant: "destructive" 
       });
     },
@@ -129,9 +132,12 @@ export default function ProjectDetailsDialog({
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Project delete error:', error);
+      const errorMessage = error?.details || error?.message || 'Unknown error occurred';
       toast({ 
         title: "Failed to delete project",
+        description: errorMessage,
         variant: "destructive" 
       });
     },
