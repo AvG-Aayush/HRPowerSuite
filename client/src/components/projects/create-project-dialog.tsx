@@ -51,7 +51,7 @@ export default function CreateProjectDialog({
   const queryClient = useQueryClient();
 
   // Fetch all employees for manager and assignment selection
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [] } = useQuery<any[]>({
     queryKey: ['/api/users'],
     enabled: open,
   });
@@ -72,12 +72,19 @@ export default function CreateProjectDialog({
   const createProjectMutation = useMutation({
     mutationFn: async (data: InsertProject) => {
       // Create project first
-      const project = await apiRequest('/api/projects', 'POST', {
-        ...data,
+      const projectData = {
+        name: data.name,
+        description: data.description,
+        projectManagerId: data.projectManagerId,
+        createdBy: data.createdBy,
+        startDate: data.startDate,
+        endDate: data.endDate,
         status: "planning",
         priority: "medium",
         isActive: true,
-      });
+      };
+      
+      const project = await apiRequest('/api/projects', 'POST', projectData);
       
       // Then create assignments
       if (data.assignedEmployees.length > 0) {
