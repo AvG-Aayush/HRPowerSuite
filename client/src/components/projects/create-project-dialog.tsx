@@ -119,7 +119,7 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
   });
 
   const createProjectMutation = useMutation({
-    mutationFn: (data: CreateProjectFormData) => {
+    mutationFn: async (data: CreateProjectFormData) => {
       console.log('Form data received:', data);
       try {
         // Transform form data using the schema
@@ -130,24 +130,38 @@ export default function CreateProjectDialog({ open, onOpenChange }: CreateProjec
           createdBy: user?.id,
         };
         console.log('Final project data:', projectData);
-        return apiRequest('POST', '/api/projects', projectData);
+        const response = await apiRequest('POST', '/api/projects', projectData);
+        return await response.json();
       } catch (error) {
         console.error('Schema validation error:', error);
         throw error;
       }
     },
     onSuccess: async (project: any) => {
+      console.log('Project created successfully:', project);
+      
       // Assign selected employees to the project
       if (selectedEmployees.length > 0) {
-        await Promise.all(
-          selectedEmployees.map(userId =>
-            apiRequest('POST', `/api/projects/${project.id}/assignments`, {
-              userId,
-              role: 'team_member',
-              assignedBy: user?.id,
+        try {
+          await Promise.all(
+            selectedEmployees.map(async (userId) => {
+              const response = await apiRequest('POST', `/api/projects/${project.id}/assignments`, {
+                userId,
+                role: 'team_member',
+                assignedBy: user?.id,
+              });
+              return await response.json();
             })
-          )
-        );
+          );
+          console.log('Employee assignments completed successfully');
+        } catch (assignmentError) {
+          console.error('Failed to assign employees:', assignmentError);
+          toast({
+            title: "Warning",
+            description: "Project created but some employee assignments failed",
+            variant: "destructive",
+          });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
