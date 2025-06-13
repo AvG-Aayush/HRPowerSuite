@@ -116,6 +116,12 @@ export default function RequestForms() {
     ? overtimeRequests.filter((request: any) => request.userId === user?.id)
     : [];
 
+  // Combine all requests and sort by creation date (most recent first)
+  const allUserRequests = [
+    ...(Array.isArray(userLeaveRequests) ? userLeaveRequests.map((req: any) => ({ ...req, type: 'leave', sortDate: req.submittedAt || req.createdAt })) : []),
+    ...userOvertimeRequests.map((req: any) => ({ ...req, type: 'overtime', sortDate: req.createdAt }))
+  ].sort((a: any, b: any) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+
   // Mutations
   const createLeaveRequestMutation = useMutation({
     mutationFn: async (data: LeaveRequestFormData) => {
@@ -818,64 +824,68 @@ export default function RequestForms() {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Leave Requests */}
-              {Array.isArray(userLeaveRequests) && userLeaveRequests.slice(0, 3).map((request: any) => (
-                <div key={`leave-${request.id}`} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      {getStatusIcon(request.status)}
-                      <h4 className="font-medium">
-                        {request.isToilRequest ? 'TOIL Leave Request' : `${request.type?.replace('_', ' ')} Leave`}
-                      </h4>
-                      {getStatusBadge(request.status)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p>
-                        {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
-                      </p>
-                      <p className="mt-1">{request.reason}</p>
-                      {request.toilHoursUsed && (
-                        <p className="text-purple-600 dark:text-purple-400">
-                          TOIL Hours Used: {request.toilHoursUsed}
-                        </p>
-                      )}
+              {allUserRequests.length > 0 ? (
+                allUserRequests.slice(0, 6).map((request: any) => (
+                  <div key={`${request.type}-${request.id}`} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        {getStatusIcon(request.status)}
+                        <h4 className="font-medium">
+                          {request.type === 'leave' 
+                            ? (request.isToilRequest ? 'TOIL Leave Request' : `${request.type?.replace('_', ' ')} Leave`)
+                            : 'Working Hours Request'
+                          }
+                        </h4>
+                        {getStatusBadge(request.status)}
+                        {request.isWeekend && (
+                          <Badge variant="outline" className="text-blue-600">Weekend</Badge>
+                        )}
+                        {request.isHoliday && (
+                          <Badge variant="outline" className="text-purple-600">Holiday</Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {request.type === 'leave' ? (
+                          <>
+                            <p>
+                              {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
+                            </p>
+                            <p className="mt-1">{request.reason}</p>
+                            {request.toilHoursUsed && (
+                              <p className="text-purple-600 dark:text-purple-400">
+                                TOIL Hours Used: {request.toilHoursUsed}
+                              </p>
+                            )}
+                            {request.status === 'rejected' && request.rejectionReason && (
+                              <p className="text-red-600 dark:text-red-400 mt-1">
+                                <strong>Rejection Reason:</strong> {request.rejectionReason}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <p className="mb-1">
+                              {format(new Date(request.requestedDate), 'MMM dd, yyyy')} - 
+                              {request.startTime} to {request.endTime} ({request.estimatedHours} hours)
+                            </p>
+                            <p>{request.reason}</p>
+                            {request.status === 'approved' && request.toilHoursAwarded && (
+                              <p className="text-green-600 dark:text-green-400">
+                                TOIL Hours Earned: {request.toilHoursAwarded}
+                              </p>
+                            )}
+                            {request.status === 'rejected' && request.rejectionReason && (
+                              <p className="text-red-600 dark:text-red-400 mt-1">
+                                <strong>Rejection Reason:</strong> {request.rejectionReason}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-
-              {/* Overtime Requests */}
-              {userOvertimeRequests.slice(0, 3).map((request: any) => (
-                <div key={`overtime-${request.id}`} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      {getStatusIcon(request.status)}
-                      <h4 className="font-medium">Working Hours Request</h4>
-                      {getStatusBadge(request.status)}
-                      {request.isWeekend && (
-                        <Badge variant="outline" className="text-blue-600">Weekend</Badge>
-                      )}
-                      {request.isHoliday && (
-                        <Badge variant="outline" className="text-purple-600">Holiday</Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p className="mb-1">
-                        {format(new Date(request.requestedDate), 'MMM dd, yyyy')} - 
-                        {request.startTime} to {request.endTime} ({request.estimatedHours} hours)
-                      </p>
-                      <p>{request.reason}</p>
-                      {request.status === 'approved' && request.toilHoursAwarded && (
-                        <p className="text-green-600 dark:text-green-400">
-                          TOIL Hours Earned: {request.toilHoursAwarded}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {(!Array.isArray(userLeaveRequests) || userLeaveRequests.length === 0) && userOvertimeRequests.length === 0 && (
+                ))
+              ) : (
                 <div className="text-center py-8">
                   <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
                   <p className="mt-2 text-muted-foreground">No requests submitted yet</p>

@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { announcements, assignments, messages, routines, shifts } from "@shared/schema";
-import { lt, sql, and, or, eq } from "drizzle-orm";
+import { announcements, assignments, messages, routines, shifts, leaveRequests, overtimeRequests } from "@shared/schema";
+import { lt, sql, and, or, eq, desc, inArray } from "drizzle-orm";
 
 export class CleanupService {
   private cleanupInterval: NodeJS.Timeout | null = null;
@@ -70,15 +70,83 @@ export class CleanupService {
           )
         );
 
+      // Cleanup old requests - keep only latest 5 per user for each request type
+      const oldLeaveRequestsResult = await this.cleanupOldUserRequests('leave');
+      const oldOvertimeRequestsResult = await this.cleanupOldUserRequests('overtime');
+
       console.log('Cleanup completed:', {
         expiredAnnouncements: expiredAnnouncementsResult.rowCount || 0,
         overdueAssignments: overdueAssignmentsResult.rowCount || 0,
         expiredRoutines: expiredRoutinesResult.rowCount || 0,
         oldMessages: oldMessagesResult.rowCount || 0,
-        oldShifts: oldShiftsResult.rowCount || 0
+        oldShifts: oldShiftsResult.rowCount || 0,
+        oldLeaveRequests: oldLeaveRequestsResult,
+        oldOvertimeRequests: oldOvertimeRequestsResult
       });
     } catch (error) {
       console.error('Cleanup failed:', error);
+    }
+  }
+
+  // Cleanup old requests - keep only latest 5 per user for each request type
+  private async cleanupOldRequests(requestType: 'leave' | 'overtime'): Promise<number> {
+    try {
+      let deletedCount = 0;
+      
+      if (requestType === 'leave') {
+        // Get all users with leave requests
+        const usersWithRequests = await db
+          .selectDistinct({ userId: leaveRequests.userId })
+          .from(leaveRequests);
+
+        for (const { userId } of usersWithRequests) {
+          // Get all requests for this user, ordered by creation date (newest first)
+          const userRequests = await db
+            .select({ id: leaveRequests.id })
+            .from(leaveRequests)
+            .where(eq(leaveRequests.userId, userId))
+            .orderBy(desc(leaveRequests.submittedAt))
+            .limit(1000); // Safety limit
+          
+          // If user has more than 5 requests, delete the oldest ones
+          if (userRequests.length > 5) {
+            const idsToDelete = userRequests.slice(5).map(req => req.id);
+            const result = await db
+              .delete(leaveRequests)
+              .where(inArray(leaveRequests.id, idsToDelete));
+            deletedCount += result.rowCount || 0;
+          }
+        }
+      } else if (requestType === 'overtime') {
+        // Get all users with overtime requests
+        const usersWithRequests = await db
+          .selectDistinct({ userId: overtimeRequests.userId })
+          .from(overtimeRequests);
+
+        for (const { userId } of usersWithRequests) {
+          // Get all requests for this user, ordered by creation date (newest first)
+          const userRequests = await db
+            .select({ id: overtimeRequests.id })
+            .from(overtimeRequests)
+            .where(eq(overtimeRequests.userId, userId))
+            .orderBy(desc(overtimeRequests.createdAt))
+            .limit(1000); // Safety limit
+          
+          // If user has more than 5 requests, delete the oldest ones
+          if (userRequests.length > 5) {
+            const idsToDelete = userRequests.slice(5).map(req => req.id);
+            const result = await db
+              .delete(overtimeRequests)
+              .where(inArray(overtimeRequests.id, idsToDelete));
+            deletedCount += result.rowCount || 0;
+          }
+        }
+      }
+      
+      return deletedCount;
+    } catch (error) {
+      console.error(`Failed to cleanup old ${requestType} requests:`, error);
+      return 0;
     }
   }
 
