@@ -4,6 +4,7 @@ import {
   leaveRequests, 
   shifts, 
   messages, 
+  messageDeliveryLog,
   chatGroups, 
   groupMemberships, 
   aiInsights,
@@ -30,6 +31,8 @@ import {
   type InsertShift,
   type Message,
   type InsertMessage,
+  type MessageDeliveryLog,
+  type InsertMessageDeliveryLog,
   type ChatGroup,
   type InsertChatGroup,
   type GroupMembership,
@@ -353,9 +356,43 @@ export class DatabaseStorage implements IStorage {
       .from(messages)
       .where(and(
         eq(messages.recipientId, userId),
-        eq(messages.isRead, false)
+        eq(messages.isRead, false),
+        eq(messages.isDeleted, false)
       ));
     return result.count;
+  }
+
+  // Message delivery logs
+  async createMessageDeliveryLog(insertDeliveryLog: InsertMessageDeliveryLog): Promise<MessageDeliveryLog> {
+    const [log] = await db.insert(messageDeliveryLog).values(insertDeliveryLog).returning();
+    return log;
+  }
+
+  async getMessageDeliveryStatus(messageId: number): Promise<MessageDeliveryLog[]> {
+    return await db.select().from(messageDeliveryLog)
+      .where(eq(messageDeliveryLog.messageId, messageId))
+      .orderBy(desc(messageDeliveryLog.lastAttemptAt));
+  }
+
+  async updateMessageDeliveryStatus(messageId: number, recipientId: number, status: string, errorMessage?: string): Promise<void> {
+    await db.update(messageDeliveryLog)
+      .set({
+        deliveryStatus: status,
+        errorMessage: errorMessage,
+        lastAttemptAt: new Date(),
+        ...(status === 'delivered' && { deliveredAt: new Date() }),
+        ...(status === 'read' && { readAt: new Date() })
+      })
+      .where(and(
+        eq(messageDeliveryLog.messageId, messageId),
+        eq(messageDeliveryLog.recipientId, recipientId)
+      ));
+  }
+
+  async getFailedMessages(): Promise<Message[]> {
+    return await db.select().from(messages)
+      .where(eq(messages.deliveryStatus, 'failed'))
+      .orderBy(desc(messages.sentAt));
   }
 
   // Chat groups

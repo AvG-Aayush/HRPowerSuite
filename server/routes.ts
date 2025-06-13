@@ -479,14 +479,46 @@ export async function registerRoutes(app: Express) {
       const messageData = insertMessageSchema.parse({
         ...req.body,
         senderId: req.user!.id,
-        sentAt: new Date()
+        sentAt: new Date(),
+        deliveryStatus: 'sent',
+        retryCount: 0
       });
       
       const message = await storage.createMessage(messageData);
+      
+      // Create delivery log entry
+      if (message.recipientId) {
+        await storage.createMessageDeliveryLog({
+          messageId: message.id,
+          recipientId: message.recipientId,
+          deliveryStatus: 'pending',
+          attemptCount: 1
+        });
+      }
+      
       res.status(201).json(message);
     } catch (error) {
       console.error('Message creation error:', error);
-      res.status(400).json({ error: 'Failed to send message', details: process.env.NODE_ENV === 'development' ? String(error) : undefined });
+      
+      // Log the failed message attempt
+      if (req.body.recipientId) {
+        try {
+          await storage.createMessageDeliveryLog({
+            messageId: 0, // Temporary ID for failed message
+            recipientId: parseInt(req.body.recipientId),
+            deliveryStatus: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            attemptCount: 1
+          });
+        } catch (logError) {
+          console.error('Failed to log message delivery error:', logError);
+        }
+      }
+      
+      res.status(400).json({ 
+        error: 'Failed to send message', 
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined 
+      });
     }
   });
 
