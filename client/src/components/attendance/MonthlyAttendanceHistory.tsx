@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, User, Printer, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, isSameDay } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -119,6 +119,69 @@ export default function MonthlyAttendanceHistory() {
 
   const stats = getTotalStats();
   const selectedEmployeeName = employees.find(emp => emp.id === selectedEmployee)?.fullName || user?.fullName;
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('monthly-report-content');
+    if (printContent) {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Monthly Attendance Report - ${selectedEmployeeName} - ${format(selectedMonth, 'MMM yyyy')}</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+                .stat-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+                .calendar { border-collapse: collapse; width: 100%; }
+                .calendar th, .calendar td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+                .calendar th { background-color: #f5f5f5; }
+                .present { background-color: #dcfce7; }
+                .absent { background-color: #fecaca; }
+                .late { background-color: #fef3c7; }
+                .weekend { background-color: #f3f4f6; }
+                @media print { .no-print { display: none; } }
+              </style>
+            </head>
+            <body>
+              ${printContent.innerHTML}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+      }
+    }
+  };
+
+  const handleExport = () => {
+    const csvContent = [
+      ['Date', 'Status', 'Check In', 'Check Out', 'Working Hours', 'Project Hours'],
+      ...monthDays.map(day => {
+        const attendance = getAttendanceForDate(day);
+        const projectTime = getProjectTimeForDate(day);
+        const totalProjectHours = projectTime.reduce((sum, entry) => sum + entry.hoursSpent, 0);
+        
+        return [
+          format(day, 'yyyy-MM-dd'),
+          isWeekend(day) ? 'Weekend' : (attendance?.status || 'Absent'),
+          attendance?.checkIn ? format(new Date(attendance.checkIn), 'HH:mm') : '',
+          attendance?.checkOut ? format(new Date(attendance.checkOut), 'HH:mm') : '',
+          attendance?.workingHours?.toString() || '0',
+          totalProjectHours.toString()
+        ];
+      })
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance-report-${selectedEmployeeName?.replace(/\s+/g, '-')}-${format(selectedMonth, 'yyyy-MM')}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   if (attendanceLoading || projectTimeLoading) {
     return (

@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EnhancedAttendanceTracker from "@/components/attendance/EnhancedAttendanceTracker";
 import AttendanceManagement from "@/components/admin/AttendanceManagement";
-import { Shield, Clock } from "lucide-react";
+import MonthlyAttendanceHistory from "@/components/attendance/MonthlyAttendanceHistory";
+import { Shield, Clock, BarChart3 } from "lucide-react";
 
 interface User {
   id: number;
@@ -37,6 +38,10 @@ export default function EnhancedAttendancePage() {
               <Shield className="h-4 w-4" />
               Manage All Attendance
             </TabsTrigger>
+            <TabsTrigger value="monthly" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Monthly Reports
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="tracker">
@@ -46,9 +51,32 @@ export default function EnhancedAttendancePage() {
           <TabsContent value="management">
             <AttendanceManagement />
           </TabsContent>
+          
+          <TabsContent value="monthly">
+            <MonthlyAttendanceHistory />
+          </TabsContent>
         </Tabs>
       ) : (
-        <EnhancedAttendanceTracker />
+        <Tabs defaultValue="tracker" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="tracker" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              My Attendance
+            </TabsTrigger>
+            <TabsTrigger value="monthly" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              My Monthly Report
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="tracker">
+            <EnhancedAttendanceTracker />
+          </TabsContent>
+          
+          <TabsContent value="monthly">
+            <MonthlyAttendanceHistory />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

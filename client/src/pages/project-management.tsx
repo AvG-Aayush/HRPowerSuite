@@ -22,7 +22,7 @@ import { format } from "date-fns";
 import CreateProjectDialog from "@/components/projects/create-project-dialog";
 import ProjectDetailsDialog from "@/components/projects/project-details-dialog";
 import ProjectTimeTracker from "@/components/projects/project-time-tracker";
-import MonthlyAttendanceHistory from "@/components/attendance/MonthlyAttendanceHistory";
+
 
 interface Project {
   id: number;
@@ -257,7 +257,7 @@ export default function ProjectManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="projects" className="flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
             {isAdminOrHR ? "All Projects" : "My Projects"}
@@ -269,10 +269,6 @@ export default function ProjectManagement() {
           <TabsTrigger value="timetracker" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Time Tracker
-          </TabsTrigger>
-          <TabsTrigger value="attendance" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Monthly Report
           </TabsTrigger>
         </TabsList>
 
@@ -329,9 +325,7 @@ export default function ProjectManagement() {
           <ProjectTimeTracker />
         </TabsContent>
 
-        <TabsContent value="attendance" className="space-y-4">
-          <MonthlyAttendanceHistory />
-        </TabsContent>
+
       </Tabs>
 
       {showCreateProject && (
