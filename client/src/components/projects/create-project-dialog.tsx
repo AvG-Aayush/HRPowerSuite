@@ -211,7 +211,7 @@ export default function CreateProjectDialog({
                 name="clientName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client Name (Optional)</FormLabel>
+                    <FormLabel>Client Name</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter client name" {...field} />
                     </FormControl>
@@ -226,7 +226,7 @@ export default function CreateProjectDialog({
                   name="startDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Date (Optional)</FormLabel>
+                      <FormLabel>Start Date</FormLabel>
                       <FormControl>
                         <Input 
                           type="date" 
@@ -244,7 +244,7 @@ export default function CreateProjectDialog({
                   name="endDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>End Date (Optional)</FormLabel>
+                      <FormLabel>End Date</FormLabel>
                       <FormControl>
                         <Input 
                           type="date" 
@@ -259,24 +259,7 @@ export default function CreateProjectDialog({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="estimatedHours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Hours (Optional)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="0"
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+             
 
                 <FormField
                   control={form.control}

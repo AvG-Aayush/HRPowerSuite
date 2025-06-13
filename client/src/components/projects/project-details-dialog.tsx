@@ -243,7 +243,6 @@ export default function ProjectDetailsDialog({
             </div>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Project Details */}
             <div className="lg:col-span-2 space-y-6">
               <Card>
@@ -362,17 +361,9 @@ export default function ProjectDetailsDialog({
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
+                     
                         <div>
-                          <Label htmlFor="estimatedHours">Estimated Hours</Label>
-                          <Input
-                            id="estimatedHours"
-                            type="number"
-                            value={editForm.estimatedHours}
-                            onChange={(e) => setEditForm({...editForm, estimatedHours: Number(e.target.value)})}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="budget">Budget ($)</Label>
+                          <Label htmlFor="budget">Budget (NRs.)</Label>
                           <Input
                             id="budget"
                             type="number"
@@ -397,16 +388,7 @@ export default function ProjectDetailsDialog({
                             </div>
                           </div>
                         )}
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">Hours</p>
-                            <p className="text-sm text-muted-foreground">
-                              {project.actualHours || 0}
-                              {project.estimatedHours && ` / ${project.estimatedHours}`} hours
-                            </p>
-                          </div>
-                        </div>
+                       
                       </div>
                       <div>
                         {project.budget && (
@@ -415,7 +397,7 @@ export default function ProjectDetailsDialog({
                             <div>
                               <p className="text-sm font-medium">Budget</p>
                               <p className="text-sm text-muted-foreground">
-                                {formatCurrency(project.spentBudget || 0)} / {formatCurrency(project.budget)}
+                                {formatCurrency(project.budget)}
                               </p>
                             </div>
                           </div>
@@ -426,61 +408,7 @@ export default function ProjectDetailsDialog({
                 </CardContent>
               </Card>
             </div>
-
-            {/* Project Stats */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Progress
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>Time Progress</span>
-                        <span>
-                          {project.actualHours || 0}
-                          {project.estimatedHours && ` / ${project.estimatedHours}`} hours
-                        </span>
-                      </div>
-                      {project.estimatedHours && (
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full" 
-                            style={{ 
-                              width: `${Math.min(((project.actualHours || 0) / project.estimatedHours) * 100, 100)}%` 
-                            }}
-                          ></div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {project.budget && (
-                      <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span>Budget Usage</span>
-                          <span>
-                            {formatCurrency(project.spentBudget || 0)} / {formatCurrency(project.budget)}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div 
-                            className="bg-green-600 h-2 rounded-full" 
-                            style={{ 
-                              width: `${Math.min(((project.spentBudget || 0) / project.budget) * 100, 100)}%` 
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+    
         </DialogContent>
       </Dialog>
 
