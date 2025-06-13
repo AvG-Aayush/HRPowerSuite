@@ -1041,8 +1041,7 @@ export async function registerRoutes(app: Express) {
       const overtimeData = {
         ...req.body,
         userId: req.user!.id,
-        requestedDate: new Date(req.body.requestedDate || req.body.date),
-        createdAt: new Date()
+        requestedDate: new Date(req.body.requestedDate || req.body.date)
       };
       
       console.log('Processed overtime data:', overtimeData);
