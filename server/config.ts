@@ -31,15 +31,17 @@ function getOptionalEnvVar(name: string, fallback: string): string {
 }
 
 export function createAppConfig(): AppConfig {
-  // Use DATABASE_URL if available, otherwise use default for development
-  const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres:password@localhost:5432/postgres";
+  // Use DATABASE_URL if available
+  const databaseUrl = process.env.DATABASE_URL;
   
-  console.log("Using database connection");
+  if (!databaseUrl) {
+    console.warn("DATABASE_URL not set - database operations may fail");
+  }
   
   return {
     database: {
-      url: databaseUrl,
-      connectionString: databaseUrl,
+      url: databaseUrl || "",
+      connectionString: databaseUrl || "",
     },
     auth: {
       sessionSecret: getOptionalEnvVar('SESSION_SECRET', 'default-session-secret-for-development'),

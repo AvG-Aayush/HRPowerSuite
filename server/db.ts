@@ -7,16 +7,13 @@ dotenv.config()
 // Use the PostgreSQL database provided by Replit
 const databaseUrl = process.env.DATABASE_URL;
 
-if (!databaseUrl || databaseUrl.trim() === '') {
-  console.log("DATABASE_URL not found, using default PostgreSQL connection");
-  // Fallback to default PostgreSQL connection for Replit environment
-  const defaultUrl = "postgresql://postgres:password@localhost:5432/postgres";
-  console.log("Using default PostgreSQL connection");
-} else {
+if (databaseUrl) {
   console.log('Using provided DATABASE_URL');
+} else {
+  console.log("DATABASE_URL not found, database operations may fail");
 }
 
-const connectionString = databaseUrl || "postgresql://postgres:password@localhost:5432/postgres";
+const connectionString = databaseUrl;
 
 export const pool = new Pool({ 
   connectionString: connectionString,
