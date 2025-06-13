@@ -1409,5 +1409,248 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Project Management API Routes
+  
+  // Projects
+  app.get('/api/projects', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      let projects;
+      if (req.user!.role === 'admin' || req.user!.role === 'hr') {
+        projects = await storage.getAllProjects();
+      } else {
+        projects = await storage.getProjectsByUser(req.user!.id);
+      }
+      res.json(projects);
+    } catch (error) {
+      console.error('Failed to fetch projects:', error);
+      res.status(500).json({ error: 'Failed to fetch projects' });
+    }
+  });
+
+  app.post('/api/projects', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const projectData = insertProjectSchema.parse({
+        ...req.body,
+        createdBy: req.user!.id
+      });
+      
+      const project = await storage.createProject(projectData);
+      res.status(201).json(project);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      res.status(400).json({ error: 'Failed to create project' });
+    }
+  });
+
+  app.get('/api/projects/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getProjectById(id);
+      
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      console.error('Failed to fetch project:', error);
+      res.status(500).json({ error: 'Failed to fetch project' });
+    }
+  });
+
+  app.put('/api/projects/:id', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const project = await storage.updateProject(id, updates);
+      res.json(project);
+    } catch (error) {
+      console.error('Failed to update project:', error);
+      res.status(400).json({ error: 'Failed to update project' });
+    }
+  });
+
+  app.delete('/api/projects/:id', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteProject(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      res.status(400).json({ error: 'Failed to delete project' });
+    }
+  });
+
+  // Project Assignments
+  app.get('/api/projects/:id/assignments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const assignments = await storage.getProjectAssignments(projectId);
+      res.json(assignments);
+    } catch (error) {
+      console.error('Failed to fetch project assignments:', error);
+      res.status(500).json({ error: 'Failed to fetch project assignments' });
+    }
+  });
+
+  app.post('/api/projects/:id/assignments', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const assignmentData = insertProjectAssignmentSchema.parse({
+        ...req.body,
+        projectId,
+        assignedBy: req.user!.id
+      });
+      
+      const assignment = await storage.assignUserToProject(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error('Failed to assign user to project:', error);
+      res.status(400).json({ error: 'Failed to assign user to project' });
+    }
+  });
+
+  app.delete('/api/projects/:projectId/assignments/:userId', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const userId = parseInt(req.params.userId);
+      
+      await storage.removeUserFromProject(projectId, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to remove user from project:', error);
+      res.status(400).json({ error: 'Failed to remove user from project' });
+    }
+  });
+
+  // Project Locations
+  app.get('/api/projects/:id/locations', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const locations = await storage.getProjectLocations(projectId);
+      res.json(locations);
+    } catch (error) {
+      console.error('Failed to fetch project locations:', error);
+      res.status(500).json({ error: 'Failed to fetch project locations' });
+    }
+  });
+
+  app.post('/api/projects/:id/locations', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const locationData = insertProjectLocationSchema.parse({
+        ...req.body,
+        projectId
+      });
+      
+      const location = await storage.addProjectLocation(locationData);
+      res.status(201).json(location);
+    } catch (error) {
+      console.error('Failed to add project location:', error);
+      res.status(400).json({ error: 'Failed to add project location' });
+    }
+  });
+
+  app.delete('/api/projects/:projectId/locations/:locationId', requireAuth, requireRole(['admin', 'hr']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const workLocationId = parseInt(req.params.locationId);
+      
+      await storage.removeProjectLocation(projectId, workLocationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to remove project location:', error);
+      res.status(400).json({ error: 'Failed to remove project location' });
+    }
+  });
+
+  // Project Time Entries
+  app.get('/api/project-time-entries', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { date } = req.query;
+      const queryDate = date ? new Date(date as string) : undefined;
+      
+      const timeEntries = await storage.getUserProjectTimeEntries(req.user!.id, queryDate);
+      res.json(timeEntries);
+    } catch (error) {
+      console.error('Failed to fetch project time entries:', error);
+      res.status(500).json({ error: 'Failed to fetch project time entries' });
+    }
+  });
+
+  app.post('/api/project-time-entries', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const timeEntryData = insertProjectTimeEntrySchema.parse({
+        ...req.body,
+        userId: req.user!.id
+      });
+      
+      const timeEntry = await storage.createProjectTimeEntry(timeEntryData);
+      res.status(201).json(timeEntry);
+    } catch (error) {
+      console.error('Failed to create project time entry:', error);
+      res.status(400).json({ error: 'Failed to create project time entry' });
+    }
+  });
+
+  app.get('/api/projects/:id/time-entries', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const timeEntries = await storage.getProjectTimeEntries(projectId);
+      res.json(timeEntries);
+    } catch (error) {
+      console.error('Failed to fetch project time entries:', error);
+      res.status(500).json({ error: 'Failed to fetch project time entries' });
+    }
+  });
+
+  app.put('/api/project-time-entries/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const timeEntry = await storage.updateProjectTimeEntry(id, updates);
+      res.json(timeEntry);
+    } catch (error) {
+      console.error('Failed to update project time entry:', error);
+      res.status(400).json({ error: 'Failed to update project time entry' });
+    }
+  });
+
+  app.delete('/api/project-time-entries/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteProjectTimeEntry(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete project time entry:', error);
+      res.status(400).json({ error: 'Failed to delete project time entry' });
+    }
+  });
+
+  // Get user's project assignments
+  app.get('/api/user/project-assignments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const assignments = await storage.getUserProjectAssignments(req.user!.id);
+      res.json(assignments);
+    } catch (error) {
+      console.error('Failed to fetch user project assignments:', error);
+      res.status(500).json({ error: 'Failed to fetch user project assignments' });
+    }
+  });
+
+  // Get daily project time entries for a user
+  app.get('/api/user/daily-project-time/:date', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const date = new Date(req.params.date);
+      const timeEntries = await storage.getDailyProjectTimeEntries(req.user!.id, date);
+      res.json(timeEntries);
+    } catch (error) {
+      console.error('Failed to fetch daily project time entries:', error);
+      res.status(500).json({ error: 'Failed to fetch daily project time entries' });
+    }
+  });
+
   return server;
 }
