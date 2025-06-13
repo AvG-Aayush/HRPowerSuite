@@ -1475,10 +1475,16 @@ export async function registerRoutes(app: Express) {
       // Extract assignedEmployees separately as it's not part of the projects table
       const { assignedEmployees, ...projectRequestData } = req.body;
       
-      const projectData = insertProjectSchema.omit({ assignedEmployees: true }).parse({
-        ...projectRequestData,
+      const projectData = {
+        name: projectRequestData.name,
+        description: projectRequestData.description,
+        status: projectRequestData.status || "planning",
+        priority: projectRequestData.priority || "medium",
+        projectManagerId: projectRequestData.projectManagerId,
+        startDate: new Date(projectRequestData.startDate),
+        endDate: new Date(projectRequestData.endDate),
         createdBy: req.user!.id
-      });
+      };
       
       console.log('Parsed project data:', projectData);
       
@@ -1518,8 +1524,10 @@ export async function registerRoutes(app: Express) {
       const id = parseInt(req.params.id);
       
       // Validate the update data
-      const updateSchema = insertProjectSchema.partial().omit({ createdBy: true });
-      const updates = updateSchema.parse(req.body);
+      const updates = {
+        ...req.body,
+        updatedAt: new Date()
+      };
       
       const project = await storage.updateProject(id, updates);
       

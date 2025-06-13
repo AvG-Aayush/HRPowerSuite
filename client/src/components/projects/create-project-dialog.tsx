@@ -5,8 +5,25 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { createProjectFormSchema } from "@shared/schema";
 import { z } from "zod";
+
+// Define form schema directly here to avoid Zod extend issues
+const createProjectFormSchema = z.object({
+  name: z.string().min(1, "Project name is required"),
+  description: z.string().min(1, "Project description is required"),
+  status: z.enum(["planning", "active", "on_hold", "completed", "cancelled"]).default("planning"),
+  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+  projectManagerId: z.number().min(1, "Project manager is required"),
+  startDate: z.date(),
+  endDate: z.date(),
+  assignedEmployees: z.array(z.number()).min(1, "At least one employee must be assigned"),
+  createdBy: z.number(),
+}).refine((data) => {
+  return new Date(data.endDate) >= new Date(data.startDate);
+}, {
+  message: "End date must be after or equal to start date",
+  path: ["endDate"],
+});
 
 type CreateProjectForm = z.infer<typeof createProjectFormSchema>;
 import {
@@ -72,7 +89,7 @@ export default function CreateProjectDialog({
   });
 
   const createProjectMutation = useMutation({
-    mutationFn: async (data: InsertProject) => {
+    mutationFn: async (data: CreateProjectForm) => {
       // Create project first
       const projectData = {
         name: data.name,
@@ -93,7 +110,7 @@ export default function CreateProjectDialog({
       // Then create assignments
       if (data.assignedEmployees.length > 0 && projectId) {
         await Promise.all(
-          data.assignedEmployees.map(userId => 
+          data.assignedEmployees.map((userId: number) => 
             apiRequest('POST', '/api/projects/' + projectId + '/assignments', {
               projectId: projectId,
               userId,
@@ -121,7 +138,7 @@ export default function CreateProjectDialog({
     },
   });
 
-  const onSubmit = (data: InsertProject) => {
+  const onSubmit = (data: CreateProjectForm) => {
     createProjectMutation.mutate(data);
   };
 

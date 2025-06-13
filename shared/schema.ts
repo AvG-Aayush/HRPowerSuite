@@ -925,8 +925,7 @@ export const insertOvertimeRequestSchema = createInsertSchema(overtimeRequests).
   processedAt: z.date().optional(),
 });
 
-// Base project schema for database insertion
-const baseProjectSchema = createInsertSchema(projects).omit({
+export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   actualHours: true,
   spentBudget: true,
@@ -944,23 +943,6 @@ const baseProjectSchema = createInsertSchema(projects).omit({
   projectManagerId: z.number().min(1, "Project manager is required"),
   startDate: z.coerce.date({ required_error: "Start date is required" }),
   endDate: z.coerce.date({ required_error: "End date is required" }),
-});
-
-export const insertProjectSchema = baseProjectSchema.refine((data) => {
-  return new Date(data.endDate) >= new Date(data.startDate);
-}, {
-  message: "End date must be after or equal to start date",
-  path: ["endDate"],
-});
-
-// Frontend form schema that includes assignedEmployees
-export const createProjectFormSchema = baseProjectSchema.extend({
-  assignedEmployees: z.array(z.number()).min(1, "At least one employee must be assigned"),
-}).refine((data) => {
-  return new Date(data.endDate) >= new Date(data.startDate);
-}, {
-  message: "End date must be after or equal to start date",
-  path: ["endDate"],
 });
 
 export const insertProjectAssignmentSchema = createInsertSchema(projectAssignments).omit({
