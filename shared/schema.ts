@@ -925,22 +925,28 @@ export const insertOvertimeRequestSchema = createInsertSchema(overtimeRequests).
   processedAt: z.date().optional(),
 });
 
-export const insertProjectSchema = createInsertSchema(projects, {
-  startDate: z.coerce.date().optional().nullable(),
-  endDate: z.coerce.date().optional().nullable(),
-  estimatedHours: z.coerce.number().optional().nullable(),
-  budget: z.coerce.number().optional().nullable(),
-  spentBudget: z.coerce.number().optional().default(0),
-}).omit({
+export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   actualHours: true,
+  spentBudget: true,
+  estimatedHours: true,
+  budget: true,
+  clientName: true,
+  isActive: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
   name: z.string().min(1, "Project name is required"),
   description: z.string().min(1, "Project description is required"),
-  status: z.enum(["planning", "active", "on_hold", "completed", "cancelled"]).default("planning"),
-  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+  projectManagerId: z.number().min(1, "Project manager is required"),
+  startDate: z.coerce.date({ required_error: "Start date is required" }),
+  endDate: z.coerce.date({ required_error: "End date is required" }),
+  assignedEmployees: z.array(z.number()).min(1, "At least one employee must be assigned"),
+}).refine((data) => {
+  return new Date(data.endDate) >= new Date(data.startDate);
+}, {
+  message: "End date must be after or equal to start date",
+  path: ["endDate"],
 });
 
 export const insertProjectAssignmentSchema = createInsertSchema(projectAssignments).omit({

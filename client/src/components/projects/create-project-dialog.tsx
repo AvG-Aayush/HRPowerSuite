@@ -1,24 +1,14 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { insertProjectSchema } from "@shared/schema";
+import { z } from "zod";
 
-interface InsertProject {
-  name: string;
-  description: string;
-  status: string;
-  priority: string;
-  startDate?: string | null;
-  endDate?: string | null;
-  estimatedHours?: number;
-  budget?: number;
-  clientName?: string;
-  projectManagerId?: number;
-  createdBy: number;
-  isActive: boolean;
-}
+type InsertProject = z.infer<typeof insertProjectSchema>;
 import {
   Dialog,
   DialogContent,
@@ -44,6 +34,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -58,26 +50,50 @@ export default function CreateProjectDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch all employees for manager and assignment selection
+  const { data: employees = [] } = useQuery({
+    queryKey: ['/api/users'],
+    enabled: open,
+  });
+
   const form = useForm<InsertProject>({
+    resolver: zodResolver(insertProjectSchema),
     defaultValues: {
       name: "",
       description: "",
-      status: "planning",
-      priority: "medium",
-      startDate: null,
-      endDate: null,
-      estimatedHours: undefined,
-      budget: undefined,
-      clientName: "",
-      projectManagerId: undefined,
+      projectManagerId: 0,
       createdBy: user?.id || 0,
-      isActive: true,
+      startDate: new Date(),
+      endDate: new Date(),
+      assignedEmployees: [],
     },
   });
 
   const createProjectMutation = useMutation({
     mutationFn: async (data: InsertProject) => {
-      return apiRequest('/api/projects', 'POST', data);
+      // Create project first
+      const project = await apiRequest('/api/projects', 'POST', {
+        ...data,
+        status: "planning",
+        priority: "medium",
+        isActive: true,
+      });
+      
+      // Then create assignments
+      if (data.assignedEmployees.length > 0) {
+        await Promise.all(
+          data.assignedEmployees.map(userId => 
+            apiRequest('/api/projects/' + project.id + '/assignments', 'POST', {
+              projectId: project.id,
+              userId,
+              role: 'team_member',
+              assignedBy: user?.id || 0,
+            })
+          )
+        );
+      }
+      
+      return project;
     },
     onSuccess: () => {
       toast({ title: "Project created successfully" });
@@ -94,20 +110,8 @@ export default function CreateProjectDialog({
     },
   });
 
-  const onSubmit = (data: any) => {
-    // Basic validation
-    if (!data.name.trim()) {
-      toast({ title: "Project name is required", variant: "destructive" });
-      return;
-    }
-    
-    const projectData = {
-      ...data,
-      createdBy: user?.id || 0,
-      startDate: data.startDate || null,
-      endDate: data.endDate || null,
-    };
-    createProjectMutation.mutate(projectData);
+  const onSubmit = (data: InsertProject) => {
+    createProjectMutation.mutate(data);
   };
 
   return (
@@ -128,7 +132,7 @@ export default function CreateProjectDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Project Name</FormLabel>
+                    <FormLabel>Project Name *</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter project name" {...field} />
                     </FormControl>
@@ -142,7 +146,7 @@ export default function CreateProjectDialog({
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description *</FormLabel>
                     <FormControl>
                       <Textarea 
                         placeholder="Describe the project objectives and scope"
@@ -155,66 +159,26 @@ export default function CreateProjectDialog({
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="planning">Planning</SelectItem>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="on_hold">On Hold</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priority</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select priority" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="critical">Critical</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               <FormField
                 control={form.control}
-                name="clientName"
+                name="projectManagerId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter client name" {...field} />
-                    </FormControl>
+                    <FormLabel>Project Manager *</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a project manager" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {employees.map((employee: any) => (
+                          <SelectItem key={employee.id} value={employee.id.toString()}>
+                            {employee.fullName} ({employee.role})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -226,12 +190,13 @@ export default function CreateProjectDialog({
                   name="startDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Date</FormLabel>
+                      <FormLabel>Start Date *</FormLabel>
                       <FormControl>
                         <Input 
                           type="date" 
                           {...field}
                           value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -244,12 +209,13 @@ export default function CreateProjectDialog({
                   name="endDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>End Date</FormLabel>
+                      <FormLabel>End Date *</FormLabel>
                       <FormControl>
                         <Input 
                           type="date" 
                           {...field}
                           value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -258,29 +224,36 @@ export default function CreateProjectDialog({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-             
-
-                <FormField
-                  control={form.control}
-                  name="budget"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Budget (Optional)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="0.00"
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="assignedEmployees"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign Employees *</FormLabel>
+                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded">
+                      {(employees as any[]).map((employee: any) => (
+                        <div key={employee.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`employee-${employee.id}`}
+                            checked={field.value.includes(employee.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                field.onChange([...field.value, employee.id]);
+                              } else {
+                                field.onChange(field.value.filter((id: number) => id !== employee.id));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`employee-${employee.id}`} className="text-sm">
+                            {employee.fullName}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="flex justify-end gap-2">
