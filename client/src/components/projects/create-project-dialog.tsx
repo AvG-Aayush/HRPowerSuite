@@ -2,10 +2,23 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { insertProjectSchema, type InsertProject } from "../../../shared/schema";
+
+interface InsertProject {
+  name: string;
+  description: string;
+  status: string;
+  priority: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  estimatedHours?: number;
+  budget?: number;
+  clientName?: string;
+  projectManagerId?: number;
+  createdBy: number;
+  isActive: boolean;
+}
 import {
   Dialog,
   DialogContent,
@@ -46,7 +59,6 @@ export default function CreateProjectDialog({
   const queryClient = useQueryClient();
 
   const form = useForm<InsertProject>({
-    resolver: zodResolver(insertProjectSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -82,12 +94,18 @@ export default function CreateProjectDialog({
     },
   });
 
-  const onSubmit = (data: InsertProject) => {
+  const onSubmit = (data: any) => {
+    // Basic validation
+    if (!data.name.trim()) {
+      toast({ title: "Project name is required", variant: "destructive" });
+      return;
+    }
+    
     const projectData = {
       ...data,
       createdBy: user?.id || 0,
-      startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
-      endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
+      startDate: data.startDate || null,
+      endDate: data.endDate || null,
     };
     createProjectMutation.mutate(projectData);
   };
