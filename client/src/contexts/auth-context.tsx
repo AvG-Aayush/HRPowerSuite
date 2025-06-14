@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import type { User } from "@shared/schema";
 
 interface AuthContextType {
@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     validateSession();
   }, []);
 
-  const validateSession = async () => {
+  const validateSession = useCallback(async () => {
     try {
       const response = await fetch("/api/user", {
         credentials: "include",
@@ -31,18 +31,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = await response.json();
         setUser(userData.user);
       } else {
-        // Invalid session
         setUser(null);
       }
     } catch (error) {
-      // Silently handle network errors during session validation
       setUser(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string) => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/login", {
@@ -60,7 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { user } = await response.json();
-      // Remove password from user object for security
       const { password: _, ...userWithoutPassword } = user;
       setUser(userWithoutPassword);
     } catch (error) {
@@ -69,9 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await fetch("/api/logout", {
         method: "POST",
@@ -83,10 +80,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSessionId(null);
     }
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    user,
+    sessionId,
+    login,
+    logout,
+    isLoading
+  }), [user, sessionId, login, logout, isLoading]);
 
   return (
-    <AuthContext.Provider value={{ user, sessionId, login, logout, isLoading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
