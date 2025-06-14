@@ -18,7 +18,7 @@ import {
 import { format } from "date-fns";
 import CreateProjectDialog from "@/components/projects/create-project-dialog";
 import ProjectDetailsDialog from "@/components/projects/project-details-dialog";
-import ProjectTimeTracker from "@/components/projects/project-time-tracker";
+import EnhancedTimeTracker from "@/components/projects/enhanced-time-tracker";
 
 interface Project {
   id: number;
@@ -235,7 +235,7 @@ export default function ProjectManagement() {
         </TabsContent>
 
         <TabsContent value="timetracker" className="space-y-4">
-          <ProjectTimeTracker />
+          <EnhancedTimeTracker />
         </TabsContent>
       </Tabs>
 
