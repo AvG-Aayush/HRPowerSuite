@@ -16,11 +16,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for existing session with server
-    validateSession();
-  }, []);
-
   const validateSession = useCallback(async () => {
     try {
       const response = await fetch("/api/user", {
@@ -39,6 +34,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    // Use requestIdleCallback for non-blocking session validation
+    const validateWhenIdle = () => {
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(() => validateSession(), { timeout: 2000 });
+      } else {
+        // Fallback for browsers without requestIdleCallback
+        setTimeout(validateSession, 100);
+      }
+    };
+    
+    validateWhenIdle();
+  }, [validateSession]);
 
   const login = useCallback(async (username: string, password: string) => {
     setIsLoading(true);
