@@ -201,6 +201,9 @@ export async function registerRoutes(app: Express) {
 
   app.get('/api/users/contacts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Add caching headers
+      res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+      
       const users = await storage.getAllUsers();
       const contacts = users
         .filter(user => user.id !== req.user!.id)
@@ -823,12 +826,22 @@ export async function registerRoutes(app: Express) {
 
 
 
-  // Dashboard metrics
+  // Dashboard metrics with caching
   app.get("/api/dashboard/metrics", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const users = await storage.getAllUsers();
-      const todayAttendance = await storage.getTodayAttendance();
-      const pendingLeaveRequests = await storage.getPendingLeaveRequests();
+      // Add aggressive caching for dashboard metrics
+      res.set({
+        'Cache-Control': 'public, max-age=30', // 30 seconds
+        'ETag': `"metrics-${Date.now()}"`,
+        'Last-Modified': new Date().toUTCString()
+      });
+      
+      // Parallel execution for better performance
+      const [users, todayAttendance, pendingLeaveRequests] = await Promise.all([
+        storage.getAllUsers(),
+        storage.getTodayAttendance(),
+        storage.getPendingLeaveRequests()
+      ]);
       
       // Calculate present employees today
       const presentToday = todayAttendance.filter(a => a.status === 'present' || a.checkIn).length;

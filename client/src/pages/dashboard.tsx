@@ -7,10 +7,12 @@ import LeaveRequests from "@/components/dashboard/leave-requests";
 import LiveTracker from "@/components/attendance/live-tracker";
 
 export default function Dashboard() {
-  // Get dashboard metrics
+  // Get dashboard metrics with optimized loading
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['/api/dashboard/metrics'],
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 60000, // Reduced frequency - every 60 seconds
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
 
   if (metricsLoading) {
